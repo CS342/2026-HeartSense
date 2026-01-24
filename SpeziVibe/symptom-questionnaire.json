@@ -1,0 +1,105 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "team-heart-symptom-log",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire"]
+  },
+  "title": "Symptom Log",
+  "status": "active",
+  "description": "Log cardiac symptoms as they occur",
+  "item": [
+    {
+      "linkId": "symptom-type",
+      "text": "What symptom are you experiencing?",
+      "type": "choice",
+      "required": true,
+      "answerOption": [
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "palpitations",
+            "display": "Palpitations (racing/fluttering heart)"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "chest-pain",
+            "display": "Chest pain or discomfort"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "shortness-of-breath",
+            "display": "Shortness of breath"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "dizziness",
+            "display": "Dizziness or lightheadedness"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "fatigue",
+            "display": "Unusual fatigue"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "syncope",
+            "display": "Fainting or near-fainting"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "edema",
+            "display": "Swelling (legs, ankles, feet)"
+          }
+        },
+        {
+          "valueCoding": {
+            "system": "http://teamheart.stanford.edu/symptoms",
+            "code": "other",
+            "display": "Other"
+          }
+        }
+      ]
+    },
+    {
+      "linkId": "severity",
+      "text": "How severe is this symptom? (1 = barely noticeable, 10 = extreme)",
+      "type": "integer",
+      "required": true,
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+          "valueInteger": 1
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+          "valueInteger": 10
+        }
+      ]
+    },
+    {
+      "linkId": "is-normal",
+      "text": "Does this feel normal for you?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "linkId": "description",
+      "text": "Any additional details? (optional)",
+      "type": "text",
+      "required": false,
+      "maxLength": 500
+    }
+  ]
+}

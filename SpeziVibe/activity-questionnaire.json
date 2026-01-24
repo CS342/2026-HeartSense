@@ -1,0 +1,91 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "team-heart-activity-log",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire"]
+  },
+  "title": "Activity Log",
+  "status": "active",
+  "description": "Log physical activities and medication changes",
+  "item": [
+    {
+      "linkId": "activity-type",
+      "text": "What activity did you do?",
+      "type": "choice",
+      "required": true,
+      "answerOption": [
+        { "valueCoding": { "code": "walking", "display": "Walking" }},
+        { "valueCoding": { "code": "running", "display": "Running/Jogging" }},
+        { "valueCoding": { "code": "cycling", "display": "Cycling" }},
+        { "valueCoding": { "code": "swimming", "display": "Swimming" }},
+        { "valueCoding": { "code": "strength-training", "display": "Strength Training" }},
+        { "valueCoding": { "code": "yoga", "display": "Yoga/Stretching" }},
+        { "valueCoding": { "code": "housework", "display": "Housework" }},
+        { "valueCoding": { "code": "gardening", "display": "Gardening" }},
+        { "valueCoding": { "code": "stairs", "display": "Climbing Stairs" }},
+        { "valueCoding": { "code": "other", "display": "Other" }}
+      ]
+    },
+    {
+      "linkId": "activity-intensity",
+      "text": "How intense was the activity?",
+      "type": "choice",
+      "required": true,
+      "answerOption": [
+        {
+          "valueCoding": {
+            "code": "light",
+            "display": "Light - can easily hold a conversation"
+          }
+        },
+        {
+          "valueCoding": {
+            "code": "moderate",
+            "display": "Moderate - breathing harder, can talk but not sing"
+          }
+        },
+        {
+          "valueCoding": {
+            "code": "vigorous",
+            "display": "Vigorous - breathing hard, difficult to talk"
+          }
+        }
+      ]
+    },
+    {
+      "linkId": "activity-duration",
+      "text": "How long did you do this activity? (minutes)",
+      "type": "integer",
+      "required": true,
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+          "valueInteger": 1
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+          "valueInteger": 480
+        }
+      ]
+    },
+    {
+      "linkId": "medication-change",
+      "text": "Any medication changes today?",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "linkId": "medication-details",
+      "text": "Describe the medication change",
+      "type": "text",
+      "required": false,
+      "enableWhen": [
+        {
+          "question": "medication-change",
+          "operator": "=",
+          "answerBoolean": true
+        }
+      ]
+    }
+  ]
+}

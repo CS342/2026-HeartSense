@@ -1,0 +1,51 @@
+{
+  "resourceType": "Questionnaire",
+  "id": "team-heart-daily-wellbeing",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire"]
+  },
+  "title": "Daily Well-being Check",
+  "status": "active",
+  "description": "Daily overall well-being assessment",
+  "item": [
+    {
+      "linkId": "wellbeing-score",
+      "text": "How are you feeling overall today?",
+      "type": "integer",
+      "required": true,
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+          "valueInteger": 1
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+          "valueInteger": 10
+        },
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+          "valueCodeableConcept": {
+            "coding": [{
+              "system": "http://hl7.org/fhir/questionnaire-item-control",
+              "code": "slider"
+            }]
+          }
+        }
+      ],
+      "item": [
+        {
+          "linkId": "wellbeing-score-help",
+          "text": "1 = Very poor, 5 = Average, 10 = Excellent",
+          "type": "display"
+        }
+      ]
+    },
+    {
+      "linkId": "wellbeing-notes",
+      "text": "Any notes about how you're feeling? (optional)",
+      "type": "text",
+      "required": false,
+      "maxLength": 300
+    }
+  ]
+}
