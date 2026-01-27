@@ -1,0 +1,294 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { ArrowLeft } from 'lucide-react-native';
+
+const ACTIVITY_TYPES = [
+  'Exercise',
+  'Walking',
+  'Running',
+  'Cycling',
+  'Swimming',
+  'Work',
+  'Rest',
+  'Sleep',
+  'Social',
+  'Other',
+];
+
+const INTENSITY_LEVELS = [
+  { value: 'low', label: 'Low', color: '#16a34a' },
+  { value: 'moderate', label: 'Moderate', color: '#ea580c' },
+  { value: 'high', label: 'High', color: '#dc2626' },
+];
+
+export default function ActivityEntry() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [selectedType, setSelectedType] = useState('');
+  const [intensity, setIntensity] = useState<'low' | 'moderate' | 'high'>('moderate');
+  const [duration, setDuration] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!selectedType) {
+      Alert.alert('Error', 'Please select an activity type');
+      return;
+    }
+
+    if (!duration) {
+      Alert.alert('Error', 'Please enter duration');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.from('activities').insert({
+        user_id: user?.id,
+        activity_type: selectedType,
+        duration_minutes: parseInt(duration),
+        intensity,
+        description,
+        occurred_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Activity logged successfully');
+      router.back();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to log activity');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft color="#1a1a1a" size={24} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Log Activity</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.label}>Activity Type</Text>
+          <View style={styles.typeGrid}>
+            {ACTIVITY_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.typeButton,
+                  selectedType === type && styles.typeButtonSelected,
+                ]}
+                onPress={() => setSelectedType(type)}
+              >
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    selectedType === type && styles.typeButtonTextSelected,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Intensity</Text>
+          <View style={styles.intensityContainer}>
+            {INTENSITY_LEVELS.map((level) => (
+              <TouchableOpacity
+                key={level.value}
+                style={[
+                  styles.intensityButton,
+                  intensity === level.value && {
+                    backgroundColor: level.color,
+                    borderColor: level.color,
+                  },
+                ]}
+                onPress={() => setIntensity(level.value as any)}
+              >
+                <Text
+                  style={[
+                    styles.intensityText,
+                    intensity === level.value && styles.intensityTextSelected,
+                  ]}
+                >
+                  {level.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Duration (minutes)</Text>
+          <TextInput
+            style={styles.input}
+            value={duration}
+            onChangeText={setDuration}
+            placeholder="Enter duration in minutes"
+            keyboardType="number-pad"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Additional Details</Text>
+          <TextInput
+            style={styles.textArea}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Describe your activity in more detail..."
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Saving...' : 'Log Activity'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+  },
+  backButton: {
+    padding: 4,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  typeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  typeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+  },
+  typeButtonSelected: {
+    backgroundColor: '#0066cc',
+    borderColor: '#0066cc',
+  },
+  typeButtonText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  typeButtonTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  intensityContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  intensityButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+    alignItems: 'center',
+  },
+  intensityText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  intensityTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  textArea: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+    minHeight: 120,
+  },
+  submitButton: {
+    backgroundColor: '#0066cc',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#99c2e6',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
