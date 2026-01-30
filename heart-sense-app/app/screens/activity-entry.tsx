@@ -8,11 +8,13 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Calendar } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ACTIVITY_TYPES = [
   'Exercise',
@@ -40,7 +42,23 @@ export default function ActivityEntry() {
   const [intensity, setIntensity] = useState<'low' | 'moderate' | 'high'>('moderate');
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
+  const [occurredAt, setOccurredAt] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const formatDateTime = (date: Date) =>
+    date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+  const onPickerChange = (event: { type: string }, date?: Date) => {
+    if (Platform.OS === 'android') setShowPicker(false);
+    if (event.type !== 'dismissed' && date) setOccurredAt(date);
+  };
 
   const handleSubmit = async () => {
     if (!selectedType) {
@@ -62,7 +80,7 @@ export default function ActivityEntry() {
         duration_minutes: parseInt(duration),
         intensity,
         description,
-        occurred_at: new Date().toISOString(),
+        occurred_at: occurredAt.toISOString(),
       });
 
       if (error) throw error;
@@ -138,6 +156,36 @@ export default function ActivityEntry() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>When did you perform this activity?</Text>
+          <TouchableOpacity
+            style={styles.dateTimeButton}
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Calendar color="#0066cc" size={20} />
+            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={occurredAt}
+              mode="datetime"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onPickerChange}
+              textColor='black'
+              accentColor='black'
+            />
+          )}
+          {Platform.OS === 'ios' && showPicker && (
+            <TouchableOpacity
+              style={styles.donePickerButton}
+              onPress={() => setShowPicker(false)}
+            >
+              <Text style={styles.donePickerText}>Done</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -256,6 +304,29 @@ const styles = StyleSheet.create({
   },
   intensityTextSelected: {
     color: '#fff',
+    fontWeight: '600',
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  dateTimeText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  donePickerButton: {
+    alignItems: 'center',
+  },
+  donePickerText: {
+    fontSize: 16,
+    color: '#0066cc',
     fontWeight: '600',
   },
   input: {

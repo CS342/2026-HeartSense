@@ -186,12 +186,12 @@ const styles = StyleSheet.create({
   },
   ratingScale: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   ratingButton: {
-    width: 40,
+    width: 60,
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
