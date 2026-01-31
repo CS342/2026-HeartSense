@@ -83,3 +83,49 @@ export const logActivity = async (activityData: Omit<Activity, 'createdAt'>) => 
     return { id: null, error: error.message || 'Failed to log activity' };
   }
 };
+
+export const getSymptoms = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'symptoms'),
+      where('userId', '==', userId),
+      orderBy('occurredAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const symptoms = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      occurredAt: doc.data().occurredAt.toDate().toISOString(),
+      createdAt: doc.data().createdAt.toDate().toISOString(),
+    }));
+
+    return { data: symptoms, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getActivities = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'activities'),
+      where('userId', '==', userId),
+      orderBy('occurredAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const activities = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      occurredAt: doc.data().occurredAt.toDate().toISOString(),
+      createdAt: doc.data().createdAt.toDate().toISOString(),
+    }));
+
+    return { data: activities, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};

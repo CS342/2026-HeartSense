@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { getSymptoms, getActivities } from '@/lib/symptomService';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
 
 interface TimelineEntry {
@@ -26,89 +27,56 @@ export default function HistoryScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [user])
+  );
 
   const loadHistory = async () => {
-    if (!user) return;
+    console.log('loadHistory called, user:', user);
+    if (!user) {
+      console.log('No user, returning');
+      return;
+    }
 
     try {
-      const [symptomsRes, ratingsRes, activitiesRes, conditionsRes] = await Promise.all([
-        supabase
-          .from('symptoms')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('well_being_ratings')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('rating_date', { ascending: false })
-          .limit(50),
-        supabase
-          .from('activities')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('medical_conditions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
+      console.log('Fetching symptoms and activities for user:', user.uid);
+      const [symptomsRes, activitiesRes] = await Promise.all([
+        getSymptoms(user.uid, 50),
+        getActivities(user.uid, 50),
       ]);
+
+      console.log('Symptoms response:', symptomsRes);
+      console.log('Activities response:', activitiesRes);
 
       const timeline: TimelineEntry[] = [];
 
-      symptomsRes.data?.forEach((s) => {
+      symptomsRes.data?.forEach((s: any) => {
         timeline.push({
           id: s.id,
           type: 'symptom',
-          title: s.symptom_type,
+          title: s.symptomType,
           description: s.description || `Severity: ${s.severity}/10`,
-          timestamp: s.occurred_at,
+          timestamp: s.occurredAt,
           details: s,
         });
       });
 
-      ratingsRes.data?.forEach((r) => {
-        timeline.push({
-          id: r.id,
-          type: 'wellbeing',
-          title: 'Well-being Rating',
-          description: `Rating: ${r.rating}/10`,
-          timestamp: r.rating_date,
-          details: r,
-        });
-      });
-
-      activitiesRes.data?.forEach((a) => {
+      activitiesRes.data?.forEach((a: any) => {
         timeline.push({
           id: a.id,
           type: 'activity',
-          title: a.activity_type,
-          description: `${a.duration_minutes} min - ${a.intensity} intensity`,
-          timestamp: a.occurred_at,
+          title: a.activityType,
+          description: `${a.durationMinutes} min - ${a.intensity} intensity`,
+          timestamp: a.occurredAt,
           details: a,
-        });
-      });
-
-      conditionsRes.data?.forEach((c) => {
-        timeline.push({
-          id: c.id,
-          type: 'medical',
-          title: c.condition_type,
-          description: c.description,
-          timestamp: c.occurred_at,
-          details: c,
         });
       });
 
       timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+      console.log('Timeline entries:', timeline.length);
       setEntries(timeline);
     } catch (error) {
       console.error('Error loading history:', error);
