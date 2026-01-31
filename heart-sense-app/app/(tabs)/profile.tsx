@@ -233,6 +233,8 @@ export default function ProfileScreen() {
     if (!user) return;
 
     try {
+      console.log('loadAccountStats: Loading for user:', user.uid);
+
       // Get profile created_at
       const profileSnap = await getDoc(doc(db, "profiles", user.uid));
       const joined = profileSnap.exists() ? (profileSnap.data() as any)?.created_at : null;
@@ -247,8 +249,14 @@ export default function ProfileScreen() {
         )
       );
 
+      console.log('loadAccountStats: Symptoms count:', snaps[0].docs.length);
+      console.log('loadAccountStats: Activities count:', snaps[1].docs.length);
+
       const allDocs = snaps.flatMap((s) => s.docs.map((d) => d.data() as any));
       const totalEntries = allDocs.length;
+
+      console.log('loadAccountStats: Total entries:', totalEntries);
+      console.log('loadAccountStats: Sample doc:', allDocs[0]);
 
       const allDates: Date[] = allDocs
         .map((x) => toJSDate(x.createdAt))
@@ -267,6 +275,8 @@ export default function ProfileScreen() {
         joinedDate: joinedDate ? joinedDate.toISOString() : "",
         lastActivity: lastActivityDate ? lastActivityDate.toISOString() : "",
       });
+
+      console.log('loadAccountStats: Stats set:', { totalEntries, daysActive: uniqueDays });
     } catch (error) {
       console.error("Error loading account stats:", error);
     }
