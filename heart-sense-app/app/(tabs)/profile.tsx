@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -97,15 +98,16 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
 
-    // load everything once user is present
-    loadProfile();
-    loadAccountStats();
-    loadNotificationPreferences();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+      // load everything when screen comes into focus
+      loadProfile();
+      loadAccountStats();
+      loadNotificationPreferences();
+    }, [user])
+  );
 
   const ensureProfileDocExists = async () => {
     if (!user) return;
