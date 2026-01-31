@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
 import { ArrowLeft, TrendingUp, Calendar } from 'lucide-react-native';
 
 const SYMPTOM_TYPES = [
@@ -52,18 +53,21 @@ export default function SymptomEntry() {
     if (!user || !selectedType) return;
 
     try {
-      const { data, error } = await supabase
-        .from('symptoms')
-        .select('severity, occurred_at')
-        .eq('user_id', user.id)
-        .eq('symptom_type', selectedType)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const q = query(
+        collection(db, 'symptoms'),
+        where('user_id', '==', user.uid),
+        where('symptom_type', '==', selectedType),
+        orderBy('occurred_at', 'desc'),
+        limit(1)
+      );
 
-      if (error) throw error;
-
-      setPreviousSymptom(data);
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const d = snap.docs[0].data() as any;
+        setPreviousSymptom({ severity: d.severity, occurred_at: d.occurred_at });
+      } else {
+        setPreviousSymptom(null);
+      }
     } catch (error) {
       console.error('Error loading previous symptom:', error);
     }
@@ -98,15 +102,14 @@ export default function SymptomEntry() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('symptoms').insert({
-        user_id: user?.id,
+      await addDoc(collection(db, 'symptoms'), {
+        user_id: user?.uid,
         symptom_type: selectedType,
         severity,
         description,
         occurred_at: occurredAt.toISOString(),
+        created_at: new Date().toISOString(),
       });
-
-      if (error) throw error;
 
       Alert.alert('Success', 'Symptom logged successfully');
       router.back();

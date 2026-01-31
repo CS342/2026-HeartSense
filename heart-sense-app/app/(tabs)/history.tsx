@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
 
 interface TimelineEntry {
@@ -34,38 +35,19 @@ export default function HistoryScreen() {
     if (!user) return;
 
     try {
-      const [symptomsRes, ratingsRes, activitiesRes, conditionsRes] = await Promise.all([
-        supabase
-          .from('symptoms')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('well_being_ratings')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('rating_date', { ascending: false })
-          .limit(50),
-        supabase
-          .from('activities')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('medical_conditions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('occurred_at', { ascending: false })
-          .limit(50),
+      const [symptomsSnap, ratingsSnap, activitiesSnap, conditionsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
+        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), orderBy('rating_date', 'desc'), limit(50))),
+        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
+        getDocs(query(collection(db, 'medical_conditions'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
       ]);
 
       const timeline: TimelineEntry[] = [];
 
-      symptomsRes.data?.forEach((s) => {
+      symptomsSnap.docs.forEach((d) => {
+        const s = d.data() as any;
         timeline.push({
-          id: s.id,
+          id: d.id,
           type: 'symptom',
           title: s.symptom_type,
           description: s.description || `Severity: ${s.severity}/10`,
@@ -74,9 +56,10 @@ export default function HistoryScreen() {
         });
       });
 
-      ratingsRes.data?.forEach((r) => {
+      ratingsSnap.docs.forEach((d) => {
+        const r = d.data() as any;
         timeline.push({
-          id: r.id,
+          id: d.id,
           type: 'wellbeing',
           title: 'Well-being Rating',
           description: `Rating: ${r.rating}/10`,
@@ -85,9 +68,10 @@ export default function HistoryScreen() {
         });
       });
 
-      activitiesRes.data?.forEach((a) => {
+      activitiesSnap.docs.forEach((d) => {
+        const a = d.data() as any;
         timeline.push({
-          id: a.id,
+          id: d.id,
           type: 'activity',
           title: a.activity_type,
           description: `${a.duration_minutes} min - ${a.intensity} intensity`,
@@ -96,9 +80,10 @@ export default function HistoryScreen() {
         });
       });
 
-      conditionsRes.data?.forEach((c) => {
+      conditionsSnap.docs.forEach((d) => {
+        const c = d.data() as any;
         timeline.push({
-          id: c.id,
+          id: d.id,
           type: 'medical',
           title: c.condition_type,
           description: c.description,

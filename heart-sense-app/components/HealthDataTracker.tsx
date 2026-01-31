@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 interface HealthDataTrackerProps {
   onDataCollected?: (data: any) => void;
@@ -35,8 +36,8 @@ export function HealthDataTracker({ onDataCollected }: HealthDataTrackerProps) {
     if (!user) return;
 
     try {
-      await supabase.from('health_data').insert({
-        user_id: user.id,
+      await addDoc(collection(db, 'health_data'), {
+        user_id: user.uid,
         data_type: dataType,
         value,
         unit,

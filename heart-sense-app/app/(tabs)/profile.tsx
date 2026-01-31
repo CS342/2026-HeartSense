@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,23 +9,46 @@ import {
   TextInput,
   Alert,
   Switch,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { User, Mail, Calendar, LogOut, Save, Bell, Activity, BarChart3, Info } from 'lucide-react-native';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
+
+import { db } from "@/lib/firebase";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+
+import {
+  User,
+  Mail,
+  Calendar,
+  LogOut,
+  Save,
+  Bell,
+  BarChart3,
+  Info,
+} from "lucide-react-native";
 
 interface Profile {
   full_name: string;
   email: string;
-  date_of_birth: string;
+  date_of_birth: string; // store as "YYYY-MM-DD" string in Firestore (recommended) or empty string in UI
 }
 
 interface AccountStats {
   totalEntries: number;
   daysActive: number;
-  joinedDate: string;
-  lastActivity: string;
+  joinedDate: string; // ISO string
+  lastActivity: string; // ISO string
 }
 
 interface NotificationPreferences {
@@ -35,107 +58,106 @@ interface NotificationPreferences {
   notify_activity_milestones: boolean;
 }
 
+function toJSDate(value: any): Date | null {
+  if (!value) return null;
+  // Firestore Timestamp
+  if (value instanceof Timestamp) return value.toDate();
+  // Some Firestore SDKs return objects with toDate()
+  if (typeof value?.toDate === "function") return value.toDate();
+  // ISO string / date string
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+
   const [profile, setProfile] = useState<Profile>({
-    full_name: '',
-    email: '',
-    date_of_birth: '',
+    full_name: "",
+    email: "",
+    date_of_birth: "",
   });
+
   const [stats, setStats] = useState<AccountStats>({
     totalEntries: 0,
     daysActive: 0,
-    joinedDate: '',
-    lastActivity: '',
+    joinedDate: "",
+    lastActivity: "",
   });
+
   const [notifications, setNotifications] = useState<NotificationPreferences>({
     notify_daily_reminder: true,
     notify_messages: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
   });
+
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
+    // load everything once user is present
     loadProfile();
     loadAccountStats();
     loadNotificationPreferences();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
+  const ensureProfileDocExists = async () => {
+    if (!user) return;
+
+    const ref = doc(db, "profiles", user.uid);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      await setDoc(
+        ref,
+        {
+          email: user.email || "",
+          full_name: "",
+          date_of_birth: null, // store null when not set
+          gender: null,
+          height_cm: null,
+          weight_kg: null,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  };
 
   const loadProfile = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      await ensureProfileDocExists();
 
-      if (error) throw error;
+      const ref = doc(db, "profiles", user.uid);
+      const snap = await getDoc(ref);
 
-      if (data) {
+      if (snap.exists()) {
+        const data: any = snap.data();
+
         setProfile({
-          full_name: data.full_name || '',
-          email: data.email || user.email || '',
-          date_of_birth: data.date_of_birth || '',
+          full_name: (data.full_name as string) || "",
+          email: (data.email as string) || user.email || "",
+          date_of_birth: (data.date_of_birth as string) || "",
+        });
+      } else {
+        // fallback (shouldn't happen after ensure)
+        setProfile({
+          full_name: "",
+          email: user.email || "",
+          date_of_birth: "",
         });
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
-    }
-  };
-
-  const loadAccountStats = async () => {
-    if (!user) return;
-
-    try {
-      const [symptomsRes, activitiesRes, ratingsRes, profileRes] = await Promise.all([
-        supabase
-          .from('symptoms')
-          .select('id, created_at', { count: 'exact' })
-          .eq('user_id', user.id),
-        supabase
-          .from('activities')
-          .select('id, created_at', { count: 'exact' })
-          .eq('user_id', user.id),
-        supabase
-          .from('well_being_ratings')
-          .select('id, created_at', { count: 'exact' })
-          .eq('user_id', user.id),
-        supabase
-          .from('profiles')
-          .select('created_at')
-          .eq('id', user.id)
-          .maybeSingle(),
-      ]);
-
-      const totalEntries = (symptomsRes.count || 0) + (activitiesRes.count || 0) + (ratingsRes.count || 0);
-
-      const allDates = [
-        ...(symptomsRes.data || []).map(s => s.created_at),
-        ...(activitiesRes.data || []).map(a => a.created_at),
-        ...(ratingsRes.data || []).map(r => r.created_at),
-      ];
-
-      const uniqueDays = new Set(
-        allDates.map(date => new Date(date).toDateString())
-      ).size;
-
-      const lastActivityDate = allDates.length > 0
-        ? new Date(Math.max(...allDates.map(d => new Date(d).getTime())))
-        : null;
-
-      setStats({
-        totalEntries,
-        daysActive: uniqueDays,
-        joinedDate: profileRes.data?.created_at || '',
-        lastActivity: lastActivityDate ? lastActivityDate.toISOString() : '',
-      });
-    } catch (error) {
-      console.error('Error loading account stats:', error);
+      console.error("Error loading profile:", error);
     }
   };
 
@@ -143,98 +165,145 @@ export default function ProfileScreen() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const ref = doc(db, "user_preferences", user.uid);
+      const snap = await getDoc(ref);
 
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
+      if (snap.exists()) {
+        const data: any = snap.data();
         setNotifications({
-          notify_daily_reminder: data.notify_daily_reminder,
-          notify_messages: data.notify_messages,
-          notify_health_insights: data.notify_health_insights,
-          notify_activity_milestones: data.notify_activity_milestones,
+          notify_daily_reminder: !!data.notify_daily_reminder,
+          notify_messages: !!data.notify_messages,
+          notify_health_insights: !!data.notify_health_insights,
+          notify_activity_milestones: !!data.notify_activity_milestones,
         });
       } else {
-        await supabase.from('user_preferences').insert({
-          user_id: user.id,
+        // create defaults
+        const defaults: NotificationPreferences = {
           notify_daily_reminder: true,
           notify_messages: true,
           notify_health_insights: true,
           notify_activity_milestones: true,
-        });
+        };
+
+        await setDoc(
+          ref,
+          {
+            ...defaults,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        setNotifications(defaults);
       }
     } catch (error) {
-      console.error('Error loading notification preferences:', error);
+      console.error("Error loading notification preferences:", error);
     }
   };
 
-  const updateNotificationPreference = async (key: keyof NotificationPreferences, value: boolean) => {
+  const updateNotificationPreference = async (
+    key: keyof NotificationPreferences,
+    value: boolean
+  ) => {
     if (!user) return;
 
+    const prev = notifications;
     const updatedPrefs = { ...notifications, [key]: value };
     setNotifications(updatedPrefs);
 
     try {
-      const { error } = await supabase
-        .from('user_preferences')
-        .update({
+      // Ensure doc exists (in case user never loaded prefs)
+      await setDoc(
+        doc(db, "user_preferences", user.uid),
+        {
           [key]: value,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+          updated_at: serverTimestamp(),
+        },
+        { merge: true }
+      );
     } catch (error) {
-      console.error('Error updating notification preference:', error);
-      setNotifications(notifications);
-      Alert.alert('Error', 'Failed to update notification preference');
+      console.error("Error updating notification preference:", error);
+      setNotifications(prev);
+      Alert.alert("Error", "Failed to update notification preference");
+    }
+  };
+
+  const loadAccountStats = async () => {
+    if (!user) return;
+
+    try {
+      // Get profile created_at
+      const profileSnap = await getDoc(doc(db, "profiles", user.uid));
+      const joined = profileSnap.exists() ? (profileSnap.data() as any)?.created_at : null;
+      const joinedDate = toJSDate(joined);
+
+      // Fetch docs for counts + dates
+      const colNames = ["symptoms", "activities", "well_being_ratings"];
+
+      const snaps = await Promise.all(
+        colNames.map((name) =>
+          getDocs(query(collection(db, name), where("user_id", "==", user.uid)))
+        )
+      );
+
+      const allDocs = snaps.flatMap((s) => s.docs.map((d) => d.data() as any));
+      const totalEntries = allDocs.length;
+
+      const allDates: Date[] = allDocs
+        .map((x) => toJSDate(x.created_at))
+        .filter((d): d is Date => d !== null);
+
+      const uniqueDays = new Set(allDates.map((d) => d.toDateString())).size;
+
+      const lastActivityDate =
+        allDates.length > 0
+          ? new Date(Math.max(...allDates.map((d) => d.getTime())))
+          : null;
+
+      setStats({
+        totalEntries,
+        daysActive: uniqueDays,
+        joinedDate: joinedDate ? joinedDate.toISOString() : "",
+        lastActivity: lastActivityDate ? lastActivityDate.toISOString() : "",
+      });
+    } catch (error) {
+      console.error("Error loading account stats:", error);
     }
   };
 
   const handleSave = async () => {
+    if (!user) return;
+
     setLoading(true);
-
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: profile.full_name,
-          date_of_birth: profile.date_of_birth || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user?.id);
-
-      if (error) throw error;
+      await updateDoc(doc(db, "profiles", user.uid), {
+        full_name: profile.full_name,
+        date_of_birth: profile.date_of_birth ? profile.date_of_birth : null, // store null if empty
+        updated_at: serverTimestamp(),
+      });
 
       setEditing(false);
-      loadProfile();
+      await loadProfile();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update profile');
+      Alert.alert("Error", error?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/auth/login');
-          },
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await signOut();
+          router.replace("/auth/login");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -248,7 +317,7 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <User color="#0066cc" size={48} />
           </View>
-          <Text style={styles.userName}>{profile.full_name || 'User'}</Text>
+          <Text style={styles.userName}>{profile.full_name || "User"}</Text>
           <Text style={styles.userEmail}>{profile.email}</Text>
         </View>
 
@@ -272,20 +341,25 @@ export default function ProfileScreen() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Member Since</Text>
             <Text style={styles.infoValue}>
-              {stats.joinedDate ? new Date(stats.joinedDate).toLocaleDateString('en-US', {
-                month: 'long',
-                year: 'numeric'
-              }) : '-'}
+              {stats.joinedDate
+                ? new Date(stats.joinedDate).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "-"}
             </Text>
           </View>
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Last Activity</Text>
             <Text style={styles.infoValue}>
-              {stats.lastActivity ? new Date(stats.lastActivity).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              }) : 'No activity yet'}
+              {stats.lastActivity
+                ? new Date(stats.lastActivity).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "No activity yet"}
             </Text>
           </View>
         </View>
@@ -306,12 +380,16 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={profile.full_name}
-                  onChangeText={(text) => setProfile({ ...profile, full_name: text })}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, full_name: text })
+                  }
                   placeholder="Enter your full name"
                   placeholderTextColor="#999"
                 />
               ) : (
-                <Text style={styles.fieldValue}>{profile.full_name || 'Not set'}</Text>
+                <Text style={styles.fieldValue}>
+                  {profile.full_name || "Not set"}
+                </Text>
               )}
             </View>
           </View>
@@ -336,19 +414,24 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={profile.date_of_birth}
-                  onChangeText={(text) => setProfile({ ...profile, date_of_birth: text })}
+                  onChangeText={(text) =>
+                    setProfile({ ...profile, date_of_birth: text })
+                  }
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#999"
                 />
               ) : (
                 <Text style={styles.fieldValue}>
                   {profile.date_of_birth
-                    ? new Date(profile.date_of_birth).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })
-                    : 'Not set'}
+                    ? new Date(profile.date_of_birth).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )
+                    : "Not set"}
                 </Text>
               )}
             </View>
@@ -370,9 +453,13 @@ export default function ProfileScreen() {
             </View>
             <Switch
               value={notifications.notify_daily_reminder}
-              onValueChange={(value) => updateNotificationPreference('notify_daily_reminder', value)}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={notifications.notify_daily_reminder ? '#0066cc' : '#f4f3f4'}
+              onValueChange={(value) =>
+                updateNotificationPreference("notify_daily_reminder", value)
+              }
+              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              thumbColor={
+                notifications.notify_daily_reminder ? "#0066cc" : "#f4f3f4"
+              }
             />
           </View>
 
@@ -385,9 +472,13 @@ export default function ProfileScreen() {
             </View>
             <Switch
               value={notifications.notify_messages}
-              onValueChange={(value) => updateNotificationPreference('notify_messages', value)}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={notifications.notify_messages ? '#0066cc' : '#f4f3f4'}
+              onValueChange={(value) =>
+                updateNotificationPreference("notify_messages", value)
+              }
+              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              thumbColor={
+                notifications.notify_messages ? "#0066cc" : "#f4f3f4"
+              }
             />
           </View>
 
@@ -400,9 +491,13 @@ export default function ProfileScreen() {
             </View>
             <Switch
               value={notifications.notify_health_insights}
-              onValueChange={(value) => updateNotificationPreference('notify_health_insights', value)}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={notifications.notify_health_insights ? '#0066cc' : '#f4f3f4'}
+              onValueChange={(value) =>
+                updateNotificationPreference("notify_health_insights", value)
+              }
+              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              thumbColor={
+                notifications.notify_health_insights ? "#0066cc" : "#f4f3f4"
+              }
             />
           </View>
 
@@ -415,9 +510,13 @@ export default function ProfileScreen() {
             </View>
             <Switch
               value={notifications.notify_activity_milestones}
-              onValueChange={(value) => updateNotificationPreference('notify_activity_milestones', value)}
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={notifications.notify_activity_milestones ? '#0066cc' : '#f4f3f4'}
+              onValueChange={(value) =>
+                updateNotificationPreference("notify_activity_milestones", value)
+              }
+              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              thumbColor={
+                notifications.notify_activity_milestones ? "#0066cc" : "#f4f3f4"
+              }
             />
           </View>
         </View>
@@ -454,16 +553,20 @@ export default function ProfileScreen() {
               disabled={loading}
             >
               <Save color="#fff" size={20} />
-              <Text style={styles.buttonText}>Save Changes</Text>
+              <Text style={styles.buttonText}>
+                {loading ? "Saving..." : "Save Changes"}
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={() => {
                 setEditing(false);
                 loadProfile();
               }}
+              disabled={loading}
             >
-              <Text style={[styles.buttonText, { color: '#666' }]}>Cancel</Text>
+              <Text style={[styles.buttonText, { color: "#666" }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -474,12 +577,15 @@ export default function ProfileScreen() {
             >
               <Text style={styles.buttonText}>Edit Profile</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.button, styles.signOutButton]}
               onPress={handleSignOut}
             >
               <LogOut color="#dc2626" size={20} />
-              <Text style={[styles.buttonText, { color: '#dc2626' }]}>Sign Out</Text>
+              <Text style={[styles.buttonText, { color: "#dc2626" }]}>
+                Sign Out
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -489,195 +595,124 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
+  container: { flex: 1, backgroundColor: "#f9fafb" },
   header: {
     padding: 24,
     paddingTop: 32,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: "#e5e5e5",
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  scrollView: {
-    flex: 1,
-  },
+  title: { fontSize: 32, fontWeight: "700", color: "#1a1a1a" },
+  scrollView: { flex: 1 },
   avatarContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 32,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   avatar: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#e6f2ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#e6f2ff",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   userName: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontWeight: "700",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-  },
-  section: {
-    padding: 16,
-    backgroundColor: '#fff',
-    marginTop: 16,
-  },
+  userEmail: { fontSize: 14, color: "#666" },
+  section: { padding: 16, backgroundColor: "#fff", marginTop: 16 },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
     gap: 8,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
+  statsGrid: { flexDirection: "row", gap: 12, marginBottom: 16 },
   statBox: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: "#f9fafb",
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: "#e5e5e5",
   },
   statValue: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#0066cc',
+    fontWeight: "700",
+    color: "#0066cc",
     marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
+  statLabel: { fontSize: 12, color: "#666", textAlign: "center" },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: "#f3f4f6",
   },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0066cc',
-  },
+  infoLabel: { fontSize: 14, color: "#666" },
+  infoValue: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
+  linkText: { fontSize: 14, fontWeight: "600", color: "#0066cc" },
   field: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: "#e5e5e5",
   },
-  fieldIcon: {
-    marginRight: 12,
-    paddingTop: 2,
-  },
-  fieldContent: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: '#1a1a1a',
-  },
+  fieldIcon: { marginRight: 12, paddingTop: 2 },
+  fieldContent: { flex: 1 },
+  fieldLabel: { fontSize: 12, color: "#666", marginBottom: 4 },
+  fieldValue: { fontSize: 16, color: "#1a1a1a" },
   input: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: "#1a1a1a",
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     padding: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
-  buttonContainer: {
-    padding: 16,
-    gap: 12,
-  },
+  buttonContainer: { padding: 16, gap: 12 },
   button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
     borderRadius: 8,
     gap: 8,
   },
-  editButton: {
-    backgroundColor: '#0066cc',
-  },
-  saveButton: {
-    backgroundColor: '#16a34a',
-  },
-  cancelButton: {
-    backgroundColor: '#f3f4f6',
-  },
+  editButton: { backgroundColor: "#0066cc" },
+  saveButton: { backgroundColor: "#16a34a" },
+  cancelButton: { backgroundColor: "#f3f4f6" },
   signOutButton: {
-    backgroundColor: '#fee',
+    backgroundColor: "#fee",
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: "#fca5a5",
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
+  buttonText: { fontSize: 16, fontWeight: "600", color: "#fff" },
   settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: "#f3f4f6",
   },
-  settingContent: {
-    flex: 1,
-    marginRight: 12,
-  },
+  settingContent: { flex: 1, marginRight: 12 },
   settingTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: "600",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
-  settingDescription: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 18,
-  },
+  settingDescription: { fontSize: 13, color: "#666", lineHeight: 18 },
 });

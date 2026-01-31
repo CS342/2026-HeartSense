@@ -10,7 +10,8 @@ import {
   Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { MessageSquare, X, Mail, MailOpen } from 'lucide-react-native';
 
 interface Message {
@@ -38,15 +39,15 @@ export default function MessagesScreen() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('myhealth_messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('received_at', { ascending: false });
+      const q = query(
+        collection(db, 'myhealth_messages'),
+        where('user_id', '==', user.uid),
+        orderBy('received_at', 'desc')
+      );
 
-      if (error) throw error;
-
-      setMessages(data || []);
+      const snap = await getDocs(q);
+      const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+      setMessages(rows as Message[]);
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
@@ -56,14 +57,9 @@ export default function MessagesScreen() {
 
   const markAsRead = async (messageId: string) => {
     try {
-      await supabase
-        .from('myhealth_messages')
-        .update({ read: true })
-        .eq('id', messageId);
+      await updateDoc(doc(db, 'myhealth_messages', messageId), { read: true });
 
-      setMessages(messages.map(m =>
-        m.id === messageId ? { ...m, read: true } : m
-      ));
+      setMessages(messages.map((m) => (m.id === messageId ? { ...m, read: true } : m)));
     } catch (error) {
       console.error('Error marking message as read:', error);
     }

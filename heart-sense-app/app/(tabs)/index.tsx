@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
   Heart,
   Activity,
@@ -54,35 +55,20 @@ export default function HomeScreen() {
       weekAgo.setDate(weekAgo.getDate() - 7);
       const weekAgoStr = weekAgo.toISOString();
 
-      const [symptomsRes, ratingRes, activitiesRes, weeklyRes] = await Promise.all([
-        supabase
-          .from('symptoms')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', todayStr),
-        supabase
-          .from('well_being_ratings')
-          .select('rating')
-          .eq('user_id', user.id)
-          .eq('rating_date', today.toISOString().split('T')[0])
-          .maybeSingle(),
-        supabase
-          .from('activities')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', todayStr),
-        supabase
-          .from('symptoms')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', weekAgoStr),
+      const todayISODate = today.toISOString().split('T')[0];
+
+      const [symptomsSnap, activitiesSnap, weeklySnap, todayRatingSnap] = await Promise.all([
+        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), where('occurred_at', '>=', todayStr))),
+        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), where('occurred_at', '>=', todayStr))),
+        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), where('occurred_at', '>=', weekAgoStr))),
+        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), where('rating_date', '==', todayISODate), limit(1))),
       ]);
 
       setStats({
-        todaySymptoms: symptomsRes.count || 0,
-        todayRating: ratingRes.data?.rating || null,
-        todayActivities: activitiesRes.count || 0,
-        weeklyEntries: weeklyRes.count || 0,
+        todaySymptoms: symptomsSnap.size || 0,
+        todayRating: todayRatingSnap.empty ? null : (todayRatingSnap.docs[0].data() as any).rating || null,
+        todayActivities: activitiesSnap.size || 0,
+        weeklyEntries: weeklySnap.size || 0,
       });
 
       await checkLastEntry();
@@ -97,34 +83,16 @@ export default function HomeScreen() {
     if (!user) return;
 
     try {
-      const { data: lastSymptom } = await supabase
-        .from('symptoms')
-        .select('occurred_at')
-        .eq('user_id', user.id)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: lastActivity } = await supabase
-        .from('activities')
-        .select('occurred_at')
-        .eq('user_id', user.id)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: lastRating } = await supabase
-        .from('well_being_ratings')
-        .select('rating_date')
-        .eq('user_id', user.id)
-        .order('rating_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const [lastSymptomSnap, lastActivitySnap, lastRatingSnap] = await Promise.all([
+        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(1))),
+        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(1))),
+        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), orderBy('rating_date', 'desc'), limit(1))),
+      ]);
 
       const dates = [
-        lastSymptom?.occurred_at,
-        lastActivity?.occurred_at,
-        lastRating?.rating_date,
+        lastSymptomSnap.docs[0]?.data()?.occurred_at,
+        lastActivitySnap.docs[0]?.data()?.occurred_at,
+        lastRatingSnap.docs[0]?.data()?.rating_date,
       ].filter(Boolean);
 
       if (dates.length === 0) {

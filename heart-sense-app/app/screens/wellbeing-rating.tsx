@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { ArrowLeft, Smile, Frown, Meh } from 'lucide-react-native';
 
 const RATINGS = [
@@ -40,17 +41,17 @@ export default function WellbeingRating() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const { error } = await supabase.from('well_being_ratings').upsert(
-        {
-          user_id: user?.id,
-          rating,
-          notes,
-          rating_date: today,
-        },
-        { onConflict: 'user_id,rating_date' }
-      );
+      // Use a compound key of userId_date to emulate upsert on (user_id, rating_date)
+      const uid = user?.uid;
+      if (!uid) throw new Error('Not authenticated');
 
-      if (error) throw error;
+      await setDoc(doc(db, 'well_being_ratings', `${uid}_${today}`), {
+        user_id: uid,
+        rating,
+        notes,
+        rating_date: today,
+        updated_at: new Date().toISOString(),
+      }, { merge: true });
 
       Alert.alert('Success', 'Well-being rating saved successfully');
       router.back();
