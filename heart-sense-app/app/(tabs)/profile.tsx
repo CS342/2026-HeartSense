@@ -238,12 +238,12 @@ export default function ProfileScreen() {
       const joined = profileSnap.exists() ? (profileSnap.data() as any)?.created_at : null;
       const joinedDate = toJSDate(joined);
 
-      // Fetch docs for counts + dates
-      const colNames = ["symptoms", "activities", "well_being_ratings"];
+      // Fetch docs for counts + dates (using camelCase field name)
+      const colNames = ["symptoms", "activities"];
 
       const snaps = await Promise.all(
         colNames.map((name) =>
-          getDocs(query(collection(db, name), where("user_id", "==", user.uid)))
+          getDocs(query(collection(db, name), where("userId", "==", user.uid)))
         )
       );
 
@@ -251,7 +251,7 @@ export default function ProfileScreen() {
       const totalEntries = allDocs.length;
 
       const allDates: Date[] = allDocs
-        .map((x) => toJSDate(x.created_at))
+        .map((x) => toJSDate(x.createdAt))
         .filter((d): d is Date => d !== null);
 
       const uniqueDays = new Set(allDates.map((d) => d.toDateString())).size;
