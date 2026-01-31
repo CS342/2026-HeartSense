@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,8 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { countSymptomsSince, countActivitiesSince, getSymptoms, getActivities } from '@/lib/symptomService';
 import {
   Heart,
   Activity,
@@ -39,36 +39,52 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [daysSinceLastEntry, setDaysSinceLastEntry] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [user])
+  );
 
   const loadStats = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadStats: No user');
+      return;
+    }
+
+    console.log('loadStats: Loading stats for user:', user.uid);
 
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString();
+      console.log('Today date:', today);
 
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString();
+      console.log('Week ago date:', weekAgo);
 
-      const todayISODate = today.toISOString().split('T')[0];
-
-      const [symptomsSnap, activitiesSnap, weeklySnap, todayRatingSnap] = await Promise.all([
-        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), where('occurred_at', '>=', todayStr))),
-        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), where('occurred_at', '>=', todayStr))),
-        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), where('occurred_at', '>=', weekAgoStr))),
-        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), where('rating_date', '==', todayISODate), limit(1))),
+      const [todaySymptomsRes, todayActivitiesRes, weeklySymptomsRes, weeklyActivitiesRes] = await Promise.all([
+        countSymptomsSince(user.uid, today),
+        countActivitiesSince(user.uid, today),
+        countSymptomsSince(user.uid, weekAgo),
+        countActivitiesSince(user.uid, weekAgo),
       ]);
 
+      console.log('Today symptoms:', todaySymptomsRes);
+      console.log('Today activities:', todayActivitiesRes);
+      console.log('Weekly symptoms:', weeklySymptomsRes);
+      console.log('Weekly activities:', weeklyActivitiesRes);
+
       setStats({
-        todaySymptoms: symptomsSnap.size || 0,
-        todayRating: todayRatingSnap.empty ? null : (todayRatingSnap.docs[0].data() as any).rating || null,
-        todayActivities: activitiesSnap.size || 0,
-        weeklyEntries: weeklySnap.size || 0,
+        todaySymptoms: todaySymptomsRes.count,
+        todayRating: null, // Well-being ratings not implemented yet
+        todayActivities: todayActivitiesRes.count,
+        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
+      });
+
+      console.log('Stats set:', {
+        todaySymptoms: todaySymptomsRes.count,
+        todayActivities: todayActivitiesRes.count,
+        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
       });
 
       await checkLastEntry();
@@ -83,16 +99,14 @@ export default function HomeScreen() {
     if (!user) return;
 
     try {
-      const [lastSymptomSnap, lastActivitySnap, lastRatingSnap] = await Promise.all([
-        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(1))),
-        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(1))),
-        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), orderBy('rating_date', 'desc'), limit(1))),
+      const [symptomsRes, activitiesRes] = await Promise.all([
+        getSymptoms(user.uid, 1),
+        getActivities(user.uid, 1),
       ]);
 
       const dates = [
-        lastSymptomSnap.docs[0]?.data()?.occurred_at,
-        lastActivitySnap.docs[0]?.data()?.occurred_at,
-        lastRatingSnap.docs[0]?.data()?.rating_date,
+        symptomsRes.data?.[0]?.occurredAt,
+        activitiesRes.data?.[0]?.occurredAt,
       ].filter(Boolean);
 
       if (dates.length === 0) {

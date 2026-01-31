@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,8 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getSymptoms, getActivities } from '@/lib/symptomService';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
 
 interface TimelineEntry {
@@ -27,73 +27,70 @@ export default function HistoryScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [user])
+  );
 
   const loadHistory = async () => {
-    if (!user) return;
+    console.log('loadHistory called, user:', user);
+    if (!user) {
+      console.log('No user, returning');
+      return;
+    }
 
     try {
-      const [symptomsSnap, ratingsSnap, activitiesSnap, conditionsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'symptoms'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
-        getDocs(query(collection(db, 'well_being_ratings'), where('user_id', '==', user.uid), orderBy('rating_date', 'desc'), limit(50))),
-        getDocs(query(collection(db, 'activities'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
-        getDocs(query(collection(db, 'medical_conditions'), where('user_id', '==', user.uid), orderBy('occurred_at', 'desc'), limit(50))),
+      console.log('Fetching symptoms and activities for user:', user.uid);
+      const [symptomsRes, activitiesRes] = await Promise.all([
+        getSymptoms(user.uid, 50),
+        getActivities(user.uid, 50),
       ]);
+
+      console.log('Symptoms response:', symptomsRes);
+      console.log('Activities response:', activitiesRes);
 
       const timeline: TimelineEntry[] = [];
 
-      symptomsSnap.docs.forEach((d) => {
-        const s = d.data() as any;
-        timeline.push({
-          id: d.id,
-          type: 'symptom',
-          title: s.symptom_type,
-          description: s.description || `Severity: ${s.severity}/10`,
-          timestamp: s.occurred_at,
-          details: s,
-        });
-      });
+      console.log('Symptoms data:', symptomsRes.data);
+      console.log('Activities data:', activitiesRes.data);
 
-      ratingsSnap.docs.forEach((d) => {
-        const r = d.data() as any;
-        timeline.push({
-          id: d.id,
-          type: 'wellbeing',
-          title: 'Well-being Rating',
-          description: `Rating: ${r.rating}/10`,
-          timestamp: r.rating_date,
-          details: r,
+      if (symptomsRes.data && Array.isArray(symptomsRes.data)) {
+        symptomsRes.data.forEach((s: any) => {
+          console.log('Processing symptom:', s);
+          timeline.push({
+            id: s.id,
+            type: 'symptom',
+            title: s.symptomType,
+            description: s.description || `Severity: ${s.severity}/10`,
+            timestamp: s.occurredAt,
+            details: s,
+          });
         });
-      });
+      }
 
-      activitiesSnap.docs.forEach((d) => {
-        const a = d.data() as any;
-        timeline.push({
-          id: d.id,
-          type: 'activity',
-          title: a.activity_type,
-          description: `${a.duration_minutes} min - ${a.intensity} intensity`,
-          timestamp: a.occurred_at,
-          details: a,
-        });
-      });
+      if (activitiesRes.data && Array.isArray(activitiesRes.data)) {
+        activitiesRes.data.forEach((a: any) => {
+          console.log('Processing activity:', a);
+          const durationInfo = `${a.durationMinutes} min - ${a.intensity} intensity`;
+          const description = a.description
+            ? `${a.description} • ${durationInfo}`
+            : durationInfo;
 
-      conditionsSnap.docs.forEach((d) => {
-        const c = d.data() as any;
-        timeline.push({
-          id: d.id,
-          type: 'medical',
-          title: c.condition_type,
-          description: c.description,
-          timestamp: c.occurred_at,
-          details: c,
+          timeline.push({
+            id: a.id,
+            type: 'activity',
+            title: a.activityType,
+            description,
+            timestamp: a.occurredAt,
+            details: a,
+          });
         });
-      });
+      }
 
       timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+      console.log('Timeline entries:', timeline.length);
       setEntries(timeline);
     } catch (error) {
       console.error('Error loading history:', error);

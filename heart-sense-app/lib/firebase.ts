@@ -1,8 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBjvgfRG-kohTjhwJe3fKmlqpI5FYgljvE",
@@ -16,10 +14,6 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-// ✅ RN/Expo persistence uses initializeAuth + AsyncStorage
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
-
+export const auth = getAuth(app);
 export const db = getFirestore(app);
 

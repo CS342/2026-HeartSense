@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import type { User as FirebaseUser } from "firebase/auth";
-import { onAuthStateChanged, signOut as fbSignOut } from "firebase/auth";
-
-import { auth } from "@/lib/firebase";
-import { signup as fbSignup, login as fbLogin } from "@/lib/auth";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import {
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { signup as fbSignup, login as fbLogin } from '@/lib/auth';
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: User | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -16,15 +18,31 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    console.log('AuthProvider: Setting up auth listener');
+
+    // Set persistence to LOCAL (stays even after browser close)
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log('Persistence set to browserLocalPersistence');
+      })
+      .catch((error) => {
+        console.error('Error setting persistence:', error);
+      });
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed. User:', user ? `${user.email} (${user.uid})` : 'null');
+      setUser(user);
       setLoading(false);
     });
-    return unsub;
+
+    return () => {
+      console.log('AuthProvider: Cleaning up auth listener');
+      unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -32,22 +50,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Ensure persistence is set before signing in
+    await setPersistence(auth, browserLocalPersistence);
     await fbLogin(email, password);
   };
 
   const signOut = async () => {
-    await fbSignOut(auth);
+    await firebaseSignOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signUp,
+        signIn,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

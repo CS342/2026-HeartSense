@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { ArrowLeft } from 'lucide-react-native';
+import { logActivity } from '@/lib/symptomService';
+import { ArrowLeft, Calendar } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ACTIVITY_TYPES = [
   'Exercise',
@@ -55,6 +55,15 @@ export default function ActivityEntry() {
       minute: '2-digit',
     });
 
+  const toLocalISOString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const onPickerChange = (event: { type: string }, date?: Date) => {
     if (Platform.OS === 'android') setShowPicker(false);
     if (event.type !== 'dismissed' && date) setOccurredAt(date);
@@ -71,20 +80,31 @@ export default function ActivityEntry() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'activities'), {
-        user_id: user?.uid,
-        activity_type: selectedType,
-        duration_minutes: parseInt(duration, 10),
+      const { error } = await logActivity({
+        userId: user.uid,
+        activityType: selectedType,
+        durationMinutes: parseInt(duration),
         intensity,
         description,
-        occurred_at: occurredAt.toISOString(),
+        occurredAt,
       });
 
+      if (error) throw new Error(error);
+
       Alert.alert('Success', 'Activity logged successfully');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log activity');
     } finally {
@@ -158,31 +178,50 @@ export default function ActivityEntry() {
 
         <View style={styles.section}>
           <Text style={styles.label}>When did you perform this activity?</Text>
-          <TouchableOpacity
-            style={styles.dateTimeButton}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Calendar color="#0066cc" size={20} />
-            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={occurredAt}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onPickerChange}
-              textColor='black'
-              accentColor='black'
+          {Platform.OS === 'web' ? (
+            <input
+              type="datetime-local"
+              value={toLocalISOString(occurredAt)}
+              onChange={(e) => setOccurredAt(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                padding: 14,
+                fontSize: 16,
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                backgroundColor: '#f9f9f9',
+                fontFamily: 'system-ui',
+              }}
             />
-          )}
-          {Platform.OS === 'ios' && showPicker && (
-            <TouchableOpacity
-              style={styles.donePickerButton}
-              onPress={() => setShowPicker(false)}
-            >
-              <Text style={styles.donePickerText}>Done</Text>
-            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Calendar color="#0066cc" size={20} />
+                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+              </TouchableOpacity>
+              {showPicker && (
+                <DateTimePicker
+                  value={occurredAt}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPickerChange}
+                  textColor='black'
+                  accentColor='black'
+                />
+              )}
+              {Platform.OS === 'ios' && showPicker && (
+                <TouchableOpacity
+                  style={styles.donePickerButton}
+                  onPress={() => setShowPicker(false)}
+                >
+                  <Text style={styles.donePickerText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
 

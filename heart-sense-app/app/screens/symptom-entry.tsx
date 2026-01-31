@@ -12,24 +12,26 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, getDocs, addDoc } from 'firebase/firestore';
-import { ArrowLeft, TrendingUp, Calendar } from 'lucide-react-native';
+import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
+import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const SYMPTOM_TYPES = [
+  'Dizziness',
   'Chest Pain',
+  'Racing Heart',
   'Shortness of Breath',
   'Palpitations',
-  'Dizziness',
   'Fatigue',
-  'Headache',
-  'Nausea',
+  'Sense of Doom',
+  'Weakness',
+  'Loss of Vision',
   'Other',
 ];
 
 interface PreviousSymptom {
   severity: number;
-  occurred_at: string;
+  occurredAt: string;
 }
 
 export default function SymptomEntry() {
@@ -52,6 +54,15 @@ export default function SymptomEntry() {
       minute: '2-digit',
     });
 
+  const toLocalISOString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const onPickerChange = (event: { type: string }, date?: Date) => {
     if (Platform.OS === 'android') setShowPicker(false);
     if (event.type !== 'dismissed' && date) setOccurredAt(date);
@@ -69,21 +80,11 @@ export default function SymptomEntry() {
     if (!user || !selectedType) return;
 
     try {
-      const q = query(
-        collection(db, 'symptoms'),
-        where('user_id', '==', user.uid),
-        where('symptom_type', '==', selectedType),
-        orderBy('occurred_at', 'desc'),
-        limit(1)
-      );
+      const { data, error } = await getPreviousSymptom(user.uid, selectedType);
 
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        const d = snap.docs[0].data() as any;
-        setPreviousSymptom({ severity: d.severity, occurred_at: d.occurred_at });
-      } else {
-        setPreviousSymptom(null);
-      }
+      if (error) throw new Error(error);
+
+      setPreviousSymptom(data);
     } catch (error) {
       console.error('Error loading previous symptom:', error);
     }
@@ -115,20 +116,30 @@ export default function SymptomEntry() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'symptoms'), {
-        user_id: user?.uid,
-        symptom_type: selectedType,
+      const { error } = await logSymptom({
+        userId: user.uid,
+        symptomType: selectedType,
         severity,
         description,
-        occurred_at: occurredAt.toISOString(),
-        created_at: new Date().toISOString(),
+        occurredAt,
       });
 
+      if (error) throw new Error(error);
+
       Alert.alert('Success', 'Symptom logged successfully');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log symptom');
     } finally {
@@ -186,7 +197,7 @@ export default function SymptomEntry() {
               <View style={styles.previousSymptomItem}>
                 <Calendar color="#666" size={16} />
                 <Text style={styles.previousSymptomDate}>
-                  {formatDate(previousSymptom.occurred_at)}
+                  {formatDate(previousSymptom.occurredAt)}
                 </Text>
               </View>
             </View>
@@ -195,31 +206,50 @@ export default function SymptomEntry() {
 
         <View style={styles.section}>
           <Text style={styles.label}>When did this symptom occur?</Text>
-          <TouchableOpacity
-            style={styles.dateTimeButton}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Clock color="#0066cc" size={20} />
-            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={occurredAt}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onPickerChange}
-              textColor='black'
-              accentColor='black'
+          {Platform.OS === 'web' ? (
+            <input
+              type="datetime-local"
+              value={toLocalISOString(occurredAt)}
+              onChange={(e) => setOccurredAt(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                padding: 14,
+                fontSize: 16,
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                backgroundColor: '#f9f9f9',
+                fontFamily: 'system-ui',
+              }}
             />
-          )}
-          {Platform.OS === 'ios' && showPicker && (
-            <TouchableOpacity
-              style={styles.donePickerButton}
-              onPress={() => setShowPicker(false)}
-            >
-              <Text style={styles.donePickerText}>Done</Text>
-            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Clock color="#0066cc" size={20} />
+                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+              </TouchableOpacity>
+              {showPicker && (
+                <DateTimePicker
+                  value={occurredAt}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPickerChange}
+                  textColor='black'
+                  accentColor='black'
+                />
+              )}
+              {Platform.OS === 'ios' && showPicker && (
+                <TouchableOpacity
+                  style={styles.donePickerButton}
+                  onPress={() => setShowPicker(false)}
+                >
+                  <Text style={styles.donePickerText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
 
