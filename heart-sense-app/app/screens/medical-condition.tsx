@@ -8,6 +8,7 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +33,23 @@ export default function MedicalCondition() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState('');
   const [description, setDescription] = useState('');
+  const [occurredAt, setOccurredAt] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const formatDateTime = (date: Date) =>
+    date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+  const onPickerChange = (event: { type: string }, date?: Date) => {
+    if (Platform.OS === 'android') setShowPicker(false);
+    if (event.type !== 'dismissed' && date) setOccurredAt(date);
+  };
 
   const handleSubmit = async () => {
     if (!selectedType) {
@@ -52,7 +69,7 @@ export default function MedicalCondition() {
         user_id: user?.uid,
         condition_type: selectedType,
         description,
-        occurred_at: new Date().toISOString(),
+        occurred_at: occurredAt.toISOString(),
       });
 
       Alert.alert('Success', 'Medical condition change logged successfully');
@@ -104,6 +121,36 @@ export default function MedicalCondition() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>When did this change occur?</Text>
+          <TouchableOpacity
+            style={styles.dateTimeButton}
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Calendar color="#0066cc" size={20} />
+            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={occurredAt}
+              mode="datetime"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onPickerChange}
+              textColor='black'
+              accentColor='black'
+            />
+          )}
+          {Platform.OS === 'ios' && showPicker && (
+            <TouchableOpacity
+              style={styles.donePickerButton}
+              onPress={() => setShowPicker(false)}
+            >
+              <Text style={styles.donePickerText}>Done</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -204,6 +251,29 @@ const styles = StyleSheet.create({
   },
   typeButtonTextSelected: {
     color: '#fff',
+    fontWeight: '600',
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+  },
+  dateTimeText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  donePickerButton: {
+    alignItems: 'center',
+  },
+  donePickerText: {
+    fontSize: 16,
+    color: '#0066cc',
     fontWeight: '600',
   },
   textArea: {
