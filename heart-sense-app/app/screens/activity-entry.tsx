@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/symptomService';
 import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -71,22 +71,31 @@ export default function ActivityEntry() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('activities').insert({
-        user_id: user?.id,
-        activity_type: selectedType,
-        duration_minutes: parseInt(duration),
+      const { error } = await logActivity({
+        userId: user.uid,
+        activityType: selectedType,
+        durationMinutes: parseInt(duration),
         intensity,
         description,
-        occurred_at: occurredAt.toISOString(),
+        occurredAt,
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       Alert.alert('Success', 'Activity logged successfully');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log activity');
     } finally {

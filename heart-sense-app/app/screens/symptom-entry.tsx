@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -69,16 +69,9 @@ export default function SymptomEntry() {
     if (!user || !selectedType) return;
 
     try {
-      const { data, error } = await supabase
-        .from('symptoms')
-        .select('severity, occurred_at')
-        .eq('user_id', user.id)
-        .eq('symptom_type', selectedType)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await getPreviousSymptom(user.uid, selectedType);
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       setPreviousSymptom(data);
     } catch (error) {
@@ -112,21 +105,30 @@ export default function SymptomEntry() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('symptoms').insert({
-        user_id: user?.id,
-        symptom_type: selectedType,
+      const { error } = await logSymptom({
+        userId: user.uid,
+        symptomType: selectedType,
         severity,
         description,
-        occurred_at: occurredAt.toISOString(),
+        occurredAt,
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
       Alert.alert('Success', 'Symptom logged successfully');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log symptom');
     } finally {
