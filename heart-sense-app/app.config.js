@@ -29,8 +29,6 @@ export default {
       typedRoutes: true
     },
     extra: {
-      EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://wtwgqbfuhkiilclsczvo.supabase.co',
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0d2dxYmZ1aGtpaWxjbHNjenZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MzYyNjMsImV4cCI6MjA4NDAxMjI2M30.Zqix4ES039_eWjtNOqHMeXYO7iazRgLMYGwNftETH0I',
     }
   }
 };

@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Calendar } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { ArrowLeft } from 'lucide-react-native';
 
 const CONDITION_TYPES = [
   'New Medication',
@@ -65,14 +65,12 @@ export default function MedicalCondition() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('medical_conditions').insert({
-        user_id: user?.id,
+      await addDoc(collection(db, 'medical_conditions'), {
+        user_id: user?.uid,
         condition_type: selectedType,
         description,
         occurred_at: occurredAt.toISOString(),
       });
-
-      if (error) throw error;
 
       Alert.alert('Success', 'Medical condition change logged successfully');
       router.back();

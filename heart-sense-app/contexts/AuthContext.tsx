@@ -2,13 +2,10 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { signup as fbSignup, login as fbLogin } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -49,20 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-    // Create user profile in Firestore
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
-      email,
-      fullName,
-      createdAt: new Date(),
-    });
+    await fbSignup(email, password, fullName);
   };
 
   const signIn = async (email: string, password: string) => {
     // Ensure persistence is set before signing in
     await setPersistence(auth, browserLocalPersistence);
-    await signInWithEmailAndPassword(auth, email, password);
+    await fbLogin(email, password);
   };
 
   const signOut = async () => {
