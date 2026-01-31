@@ -52,27 +52,41 @@ export default function HistoryScreen() {
 
       const timeline: TimelineEntry[] = [];
 
-      symptomsRes.data?.forEach((s: any) => {
-        timeline.push({
-          id: s.id,
-          type: 'symptom',
-          title: s.symptomType,
-          description: s.description || `Severity: ${s.severity}/10`,
-          timestamp: s.occurredAt,
-          details: s,
-        });
-      });
+      console.log('Symptoms data:', symptomsRes.data);
+      console.log('Activities data:', activitiesRes.data);
 
-      activitiesRes.data?.forEach((a: any) => {
-        timeline.push({
-          id: a.id,
-          type: 'activity',
-          title: a.activityType,
-          description: `${a.durationMinutes} min - ${a.intensity} intensity`,
-          timestamp: a.occurredAt,
-          details: a,
+      if (symptomsRes.data && Array.isArray(symptomsRes.data)) {
+        symptomsRes.data.forEach((s: any) => {
+          console.log('Processing symptom:', s);
+          timeline.push({
+            id: s.id,
+            type: 'symptom',
+            title: s.symptomType,
+            description: s.description || `Severity: ${s.severity}/10`,
+            timestamp: s.occurredAt,
+            details: s,
+          });
         });
-      });
+      }
+
+      if (activitiesRes.data && Array.isArray(activitiesRes.data)) {
+        activitiesRes.data.forEach((a: any) => {
+          console.log('Processing activity:', a);
+          const durationInfo = `${a.durationMinutes} min - ${a.intensity} intensity`;
+          const description = a.description
+            ? `${a.description} • ${durationInfo}`
+            : durationInfo;
+
+          timeline.push({
+            id: a.id,
+            type: 'activity',
+            title: a.activityType,
+            description,
+            timestamp: a.occurredAt,
+            details: a,
+          });
+        });
+      }
 
       timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 

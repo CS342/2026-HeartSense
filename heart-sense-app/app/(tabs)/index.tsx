@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { countSymptomsSince, countActivitiesSince, getSymptoms, getActivities } from '@/lib/symptomService';
 import {
   Heart,
   Activity,
@@ -38,51 +39,52 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [daysSinceLastEntry, setDaysSinceLastEntry] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadStats();
+    }, [user])
+  );
 
   const loadStats = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadStats: No user');
+      return;
+    }
+
+    console.log('loadStats: Loading stats for user:', user.uid);
 
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString();
+      console.log('Today date:', today);
 
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString();
+      console.log('Week ago date:', weekAgo);
 
-      const [symptomsRes, ratingRes, activitiesRes, weeklyRes] = await Promise.all([
-        supabase
-          .from('symptoms')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', todayStr),
-        supabase
-          .from('well_being_ratings')
-          .select('rating')
-          .eq('user_id', user.id)
-          .eq('rating_date', today.toISOString().split('T')[0])
-          .maybeSingle(),
-        supabase
-          .from('activities')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', todayStr),
-        supabase
-          .from('symptoms')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-          .gte('occurred_at', weekAgoStr),
+      const [todaySymptomsRes, todayActivitiesRes, weeklySymptomsRes, weeklyActivitiesRes] = await Promise.all([
+        countSymptomsSince(user.uid, today),
+        countActivitiesSince(user.uid, today),
+        countSymptomsSince(user.uid, weekAgo),
+        countActivitiesSince(user.uid, weekAgo),
       ]);
 
+      console.log('Today symptoms:', todaySymptomsRes);
+      console.log('Today activities:', todayActivitiesRes);
+      console.log('Weekly symptoms:', weeklySymptomsRes);
+      console.log('Weekly activities:', weeklyActivitiesRes);
+
       setStats({
-        todaySymptoms: symptomsRes.count || 0,
-        todayRating: ratingRes.data?.rating || null,
-        todayActivities: activitiesRes.count || 0,
-        weeklyEntries: weeklyRes.count || 0,
+        todaySymptoms: todaySymptomsRes.count,
+        todayRating: null, // Well-being ratings not implemented yet
+        todayActivities: todayActivitiesRes.count,
+        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
+      });
+
+      console.log('Stats set:', {
+        todaySymptoms: todaySymptomsRes.count,
+        todayActivities: todayActivitiesRes.count,
+        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
       });
 
       await checkLastEntry();
@@ -97,34 +99,14 @@ export default function HomeScreen() {
     if (!user) return;
 
     try {
-      const { data: lastSymptom } = await supabase
-        .from('symptoms')
-        .select('occurred_at')
-        .eq('user_id', user.id)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: lastActivity } = await supabase
-        .from('activities')
-        .select('occurred_at')
-        .eq('user_id', user.id)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: lastRating } = await supabase
-        .from('well_being_ratings')
-        .select('rating_date')
-        .eq('user_id', user.id)
-        .order('rating_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const [symptomsRes, activitiesRes] = await Promise.all([
+        getSymptoms(user.uid, 1),
+        getActivities(user.uid, 1),
+      ]);
 
       const dates = [
-        lastSymptom?.occurred_at,
-        lastActivity?.occurred_at,
-        lastRating?.rating_date,
+        symptomsRes.data?.[0]?.occurredAt,
+        activitiesRes.data?.[0]?.occurredAt,
       ].filter(Boolean);
 
       if (dates.length === 0) {

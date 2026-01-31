@@ -29,7 +29,7 @@ const SYMPTOM_TYPES = [
 
 interface PreviousSymptom {
   severity: number;
-  occurred_at: string;
+  occurredAt: string;
 }
 
 export default function SymptomEntry() {
@@ -51,6 +51,15 @@ export default function SymptomEntry() {
       hour: 'numeric',
       minute: '2-digit',
     });
+
+  const toLocalISOString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   const onPickerChange = (event: { type: string }, date?: Date) => {
     if (Platform.OS === 'android') setShowPicker(false);
@@ -186,7 +195,7 @@ export default function SymptomEntry() {
               <View style={styles.previousSymptomItem}>
                 <Calendar color="#666" size={16} />
                 <Text style={styles.previousSymptomDate}>
-                  {formatDate(previousSymptom.occurred_at)}
+                  {formatDate(previousSymptom.occurredAt)}
                 </Text>
               </View>
             </View>
@@ -195,31 +204,50 @@ export default function SymptomEntry() {
 
         <View style={styles.section}>
           <Text style={styles.label}>When did this symptom occur?</Text>
-          <TouchableOpacity
-            style={styles.dateTimeButton}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Clock color="#0066cc" size={20} />
-            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={occurredAt}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onPickerChange}
-              textColor='black'
-              accentColor='black'
+          {Platform.OS === 'web' ? (
+            <input
+              type="datetime-local"
+              value={toLocalISOString(occurredAt)}
+              onChange={(e) => setOccurredAt(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                padding: 14,
+                fontSize: 16,
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                backgroundColor: '#f9f9f9',
+                fontFamily: 'system-ui',
+              }}
             />
-          )}
-          {Platform.OS === 'ios' && showPicker && (
-            <TouchableOpacity
-              style={styles.donePickerButton}
-              onPress={() => setShowPicker(false)}
-            >
-              <Text style={styles.donePickerText}>Done</Text>
-            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Clock color="#0066cc" size={20} />
+                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+              </TouchableOpacity>
+              {showPicker && (
+                <DateTimePicker
+                  value={occurredAt}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPickerChange}
+                  textColor='black'
+                  accentColor='black'
+                />
+              )}
+              {Platform.OS === 'ios' && showPicker && (
+                <TouchableOpacity
+                  style={styles.donePickerButton}
+                  onPress={() => setShowPicker(false)}
+                >
+                  <Text style={styles.donePickerText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
 

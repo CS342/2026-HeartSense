@@ -129,3 +129,33 @@ export const getActivities = async (userId: string, limitCount: number = 50) => 
     return { data: null, error: error.message };
   }
 };
+
+export const countSymptomsSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'symptoms'),
+      where('userId', '==', userId),
+      where('occurredAt', '>=', Timestamp.fromDate(since))
+    );
+
+    const querySnapshot = await getDocs(q);
+    return { count: querySnapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countActivitiesSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'activities'),
+      where('userId', '==', userId),
+      where('occurredAt', '>=', Timestamp.fromDate(since))
+    );
+
+    const querySnapshot = await getDocs(q);
+    return { count: querySnapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};

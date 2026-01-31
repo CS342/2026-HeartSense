@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
+import { User, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import {
   createUserWithEmailAndPassword,
@@ -25,12 +25,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthProvider: Setting up auth listener');
+
+    // Set persistence to LOCAL (stays even after browser close)
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        console.log('Persistence set to browserLocalPersistence');
+      })
+      .catch((error) => {
+        console.error('Error setting persistence:', error);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed. User:', user ? `${user.email} (${user.uid})` : 'null');
       setUser(user);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      console.log('AuthProvider: Cleaning up auth listener');
+      unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -45,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Ensure persistence is set before signing in
+    await setPersistence(auth, browserLocalPersistence);
     await signInWithEmailAndPassword(auth, email, password);
   };
 
