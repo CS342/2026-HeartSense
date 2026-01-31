@@ -17,13 +17,15 @@ import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const SYMPTOM_TYPES = [
+  'Dizziness',
   'Chest Pain',
+  'Racing Heart',
   'Shortness of Breath',
   'Palpitations',
-  'Dizziness',
   'Fatigue',
-  'Headache',
-  'Nausea',
+  'Sense of Doom',
+  'Weakness',
+  'Loss of Vision',
   'Other',
 ];
 
