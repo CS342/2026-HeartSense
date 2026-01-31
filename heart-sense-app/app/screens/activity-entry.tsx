@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Calendar } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { ArrowLeft } from 'lucide-react-native';
 
 const ACTIVITY_TYPES = [
   'Exercise',
@@ -74,16 +74,14 @@ export default function ActivityEntry() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('activities').insert({
-        user_id: user?.id,
+      await addDoc(collection(db, 'activities'), {
+        user_id: user?.uid,
         activity_type: selectedType,
-        duration_minutes: parseInt(duration),
+        duration_minutes: parseInt(duration, 10),
         intensity,
         description,
         occurred_at: occurredAt.toISOString(),
       });
-
-      if (error) throw error;
 
       Alert.alert('Success', 'Activity logged successfully');
       router.back();
