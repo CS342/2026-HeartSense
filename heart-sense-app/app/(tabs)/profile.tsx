@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -97,15 +98,16 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
 
-    // load everything once user is present
-    loadProfile();
-    loadAccountStats();
-    loadNotificationPreferences();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+      // load everything when screen comes into focus
+      loadProfile();
+      loadAccountStats();
+      loadNotificationPreferences();
+    }, [user])
+  );
 
   const ensureProfileDocExists = async () => {
     if (!user) return;
@@ -233,25 +235,33 @@ export default function ProfileScreen() {
     if (!user) return;
 
     try {
+      console.log('loadAccountStats: Loading for user:', user.uid);
+
       // Get profile created_at
       const profileSnap = await getDoc(doc(db, "profiles", user.uid));
       const joined = profileSnap.exists() ? (profileSnap.data() as any)?.created_at : null;
       const joinedDate = toJSDate(joined);
 
-      // Fetch docs for counts + dates
-      const colNames = ["symptoms", "activities", "well_being_ratings"];
+      // Fetch docs for counts + dates (using camelCase field name)
+      const colNames = ["symptoms", "activities"];
 
       const snaps = await Promise.all(
         colNames.map((name) =>
-          getDocs(query(collection(db, name), where("user_id", "==", user.uid)))
+          getDocs(query(collection(db, name), where("userId", "==", user.uid)))
         )
       );
+
+      console.log('loadAccountStats: Symptoms count:', snaps[0].docs.length);
+      console.log('loadAccountStats: Activities count:', snaps[1].docs.length);
 
       const allDocs = snaps.flatMap((s) => s.docs.map((d) => d.data() as any));
       const totalEntries = allDocs.length;
 
+      console.log('loadAccountStats: Total entries:', totalEntries);
+      console.log('loadAccountStats: Sample doc:', allDocs[0]);
+
       const allDates: Date[] = allDocs
-        .map((x) => toJSDate(x.created_at))
+        .map((x) => toJSDate(x.createdAt))
         .filter((d): d is Date => d !== null);
 
       const uniqueDays = new Set(allDates.map((d) => d.toDateString())).size;
@@ -267,6 +277,8 @@ export default function ProfileScreen() {
         joinedDate: joinedDate ? joinedDate.toISOString() : "",
         lastActivity: lastActivityDate ? lastActivityDate.toISOString() : "",
       });
+
+      console.log('loadAccountStats: Stats set:', { totalEntries, daysActive: uniqueDays });
     } catch (error) {
       console.error("Error loading account stats:", error);
     }
