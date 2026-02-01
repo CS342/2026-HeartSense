@@ -34,7 +34,6 @@ export {
 export {
   dailyReminderCheck,
   inactivityAlertCheck,
-  streakAtRiskCheck,
   weeklySummaryGeneration,
   cleanupExpiredAlerts,
   monthlyStatsReset,
@@ -50,7 +49,6 @@ export {
   markAlertRead,
   markAllAlertsRead,
   getUserMilestones,
-  getEngagementLeaderboard,
   getDailyEngagementHistory,
   recalculateEngagementStats,
   dismissAlert,

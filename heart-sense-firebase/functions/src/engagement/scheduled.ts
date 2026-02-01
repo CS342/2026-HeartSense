@@ -9,7 +9,6 @@ import * as admin from "firebase-admin";
 import {Timestamp, WriteBatch} from "firebase-admin/firestore";
 import {
   getInactiveUsers,
-  getUsersWithStreaksAtRisk,
   createEngagementAlert,
   getUserNotificationPreferences,
   recalculateWeeklyCount,
@@ -170,67 +169,6 @@ export const inactivityAlertCheck = onSchedule(
 );
 
 /**
- * Scheduled: Streak At Risk Alert (runs every day at 8 PM)
- * Alerts users who might lose their streak if they don't log today
- */
-export const streakAtRiskCheck = onSchedule(
-  {
-    schedule: "0 20 * * *", // Every day at 8 PM
-    timeZone: "America/Los_Angeles",
-  },
-  async () => {
-    logger.info("Running streak at risk check");
-    const today = getTodayDateString();
-
-    try {
-      const atRiskUsers = await getUsersWithStreaksAtRisk();
-
-      let alertsCreated = 0;
-
-      for (const user of atRiskUsers) {
-        // Check user preferences
-        const prefs = await getUserNotificationPreferences(user.userId);
-        if (prefs?.notify_activity_milestones === false) {
-          continue; // User doesn't want milestone notifications
-        }
-
-        // Check if already alerted today
-        const todayStart = new Date(today + "T00:00:00");
-        const existingAlert = await db
-          .collection("engagement_alerts")
-          .where("userId", "==", user.userId)
-          .where("alertType", "==", "streak_at_risk")
-          .where("createdAt", ">=", Timestamp.fromDate(todayStart))
-          .limit(1)
-          .get();
-
-        if (!existingAlert.empty) {
-          continue;
-        }
-
-        // Create streak at risk alert
-        await createEngagementAlert(
-          user.userId,
-          "streak_at_risk",
-          `Don't Lose Your ${user.currentStreak}-Day Streak!`,
-          "You're so close to keeping your streak alive! " +
-          "Log a quick entry before midnight to maintain your progress.",
-          "high",
-          {currentStreak: user.currentStreak},
-          6 // Expires in 6 hours
-        );
-
-        alertsCreated++;
-      }
-
-      logger.info(`Streak at risk check complete. Created ${alertsCreated} alerts.`);
-    } catch (error) {
-      logger.error(`Error in streak at risk check: ${error}`);
-    }
-  }
-);
-
-/**
  * Scheduled: Weekly Summary (runs every Monday at 10 AM)
  * Generates and sends weekly engagement summaries
  */
@@ -278,10 +216,6 @@ export const weeklySummaryGeneration = onSchedule(
             "Even brief check-ins help track your health!";
         }
 
-        if (stats.currentStreak > 0) {
-          message += ` Current streak: ${stats.currentStreak} days!`;
-        }
-
         // Create weekly summary alert
         await createEngagementAlert(
           userId,
@@ -292,7 +226,6 @@ export const weeklySummaryGeneration = onSchedule(
           {
             weeklyCount,
             previousWeekCount,
-            currentStreak: stats.currentStreak,
           },
           168 // Expires in 1 week
         );
@@ -398,13 +331,11 @@ export const monthlyStatsReset = onSchedule(
             "Monthly Health Recap",
             `Last month you logged ${stats.monthlyEntryCount} entries ` +
             `across ${stats.totalDaysActive} active days. ` +
-            `Your longest streak was ${stats.longestStreak} days. ` +
             "Keep up the great work this month!",
             "low",
             {
               monthlyEntryCount: stats.monthlyEntryCount,
               totalDaysActive: stats.totalDaysActive,
-              longestStreak: stats.longestStreak,
             },
             168 // Expires in 1 week
           );
