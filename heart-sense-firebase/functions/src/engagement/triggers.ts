@@ -101,7 +101,7 @@ export const onActivityCreated = onDocumentCreated(
  * Updates engagement stats and checks for milestones
  */
 export const onWellbeingRatingCreated = onDocumentCreated(
-  "wellbeing_ratings/{ratingId}",
+  "well_being_ratings/{ratingId}",
   async (event: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
     const ratingData = event.data?.data();
     if (!ratingData) {
