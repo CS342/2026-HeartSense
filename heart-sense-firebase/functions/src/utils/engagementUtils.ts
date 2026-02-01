@@ -1,6 +1,6 @@
 /**
  * Engagement Utility Functions
- * Helper functions for engagement tracking, streak calculation, and milestone detection
+ * Helper functions for engagement tracking and milestone detection
  */
 
 import * as admin from "firebase-admin";
@@ -12,7 +12,6 @@ import {
   DailyEngagementLog,
   AlertType,
   MilestoneType,
-  STREAK_MILESTONES,
   ENTRY_MILESTONES,
   DAYS_ACTIVE_MILESTONES,
 } from "../types/engagement";
@@ -36,24 +35,6 @@ export function getDateStringDaysAgo(days: number): string {
 }
 
 /**
- * Calculate the number of days between two dates
- */
-export function daysBetween(date1: Date, date2: Date): number {
-  const oneDay = 24 * 60 * 60 * 1000;
-  return Math.floor(Math.abs((date1.getTime() - date2.getTime()) / oneDay));
-}
-
-/**
- * Check if two dates are consecutive (1 day apart)
- */
-export function areConsecutiveDays(date1: string, date2: string): boolean {
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
-  const diff = daysBetween(d1, d2);
-  return diff === 1;
-}
-
-/**
  * Get or create user engagement stats document
  */
 export async function getOrCreateEngagementStats(
@@ -69,8 +50,6 @@ export async function getOrCreateEngagementStats(
   // Create new engagement stats for user
   const newStats: UserEngagementStats = {
     userId,
-    currentStreak: 0,
-    longestStreak: 0,
     totalEntriesLogged: 0,
     totalDaysActive: 0,
     lastActivityDate: null,
@@ -103,8 +82,6 @@ export async function updateEngagementStats(
       ? (statsDoc.data() as UserEngagementStats)
       : {
           userId,
-          currentStreak: 0,
-          longestStreak: 0,
           totalEntriesLogged: 0,
           totalDaysActive: 0,
           lastActivityDate: null,
@@ -131,7 +108,7 @@ export async function updateEngagementStats(
       }
     }
 
-    // Calculate streak
+    // Track unique active days
     const lastActivityDate = stats.lastActivityDate;
 
     if (lastActivityDate !== today) {
@@ -139,37 +116,9 @@ export async function updateEngagementStats(
 
       // Check days active milestones
       for (const milestone of DAYS_ACTIVE_MILESTONES) {
-        if (
-          stats.totalDaysActive === milestone
-        ) {
+        if (stats.totalDaysActive === milestone) {
           newMilestones.push(`days_active_${milestone}` as MilestoneType);
         }
-      }
-
-      // Update streak
-      if (lastActivityDate === null) {
-        // First ever activity
-        stats.currentStreak = 1;
-      } else if (areConsecutiveDays(lastActivityDate, today)) {
-        // Consecutive day - increment streak
-        stats.currentStreak += 1;
-      } else if (lastActivityDate === today) {
-        // Same day - no change to streak
-      } else {
-        // Gap in activity - reset streak
-        stats.currentStreak = 1;
-      }
-
-      // Check streak milestones
-      for (const milestone of STREAK_MILESTONES) {
-        if (stats.currentStreak === milestone) {
-          newMilestones.push(`streak_${milestone}_days` as MilestoneType);
-        }
-      }
-
-      // Update longest streak if needed
-      if (stats.currentStreak > stats.longestStreak) {
-        stats.longestStreak = stats.currentStreak;
       }
     }
 
@@ -316,78 +265,39 @@ export async function getUserNotificationPreferences(
 export function getMilestoneDisplayInfo(milestoneType: MilestoneType): {
   title: string;
   message: string;
-  emoji: string;
 } {
-  const milestoneInfo: Record<MilestoneType, {title: string; message: string; emoji: string}> = {
+  const milestoneInfo: Record<MilestoneType, {title: string; message: string}> = {
     "first_entry": {
       title: "First Entry!",
       message: "You've logged your first entry. Great start on your health journey!",
-      emoji: "🎉",
-    },
-    "streak_3_days": {
-      title: "3 Day Streak!",
-      message: "You've been logging for 3 days in a row. Keep it up!",
-      emoji: "🔥",
-    },
-    "streak_7_days": {
-      title: "1 Week Streak!",
-      message: "A full week of consistent logging! You're building great habits.",
-      emoji: "⭐",
-    },
-    "streak_14_days": {
-      title: "2 Week Streak!",
-      message: "Two weeks strong! Your dedication is impressive.",
-      emoji: "🏆",
-    },
-    "streak_30_days": {
-      title: "1 Month Streak!",
-      message: "An entire month of daily logging! You're a health tracking champion.",
-      emoji: "🥇",
-    },
-    "streak_60_days": {
-      title: "2 Month Streak!",
-      message: "60 days of consistency! Your commitment to health tracking is outstanding.",
-      emoji: "💪",
-    },
-    "streak_90_days": {
-      title: "3 Month Streak!",
-      message: "90 days! You've made health tracking a true lifestyle habit.",
-      emoji: "👑",
     },
     "entries_10": {
       title: "10 Entries!",
       message: "You've logged 10 entries. You're getting into the groove!",
-      emoji: "📝",
     },
     "entries_50": {
       title: "50 Entries!",
       message: "50 entries logged! That's a wealth of health data.",
-      emoji: "📊",
     },
     "entries_100": {
       title: "100 Entries!",
       message: "100 entries! You're a dedicated health tracker.",
-      emoji: "💯",
     },
     "entries_500": {
       title: "500 Entries!",
       message: "500 entries! You've built an incredible health record.",
-      emoji: "🌟",
     },
     "days_active_7": {
       title: "7 Days Active!",
       message: "You've been active on 7 different days. Great engagement!",
-      emoji: "📅",
     },
     "days_active_30": {
       title: "30 Days Active!",
       message: "30 unique days of activity! You're a regular user.",
-      emoji: "🗓️",
     },
     "days_active_100": {
       title: "100 Days Active!",
       message: "100 days of using HeartSense! Thank you for your dedication.",
-      emoji: "🎊",
     },
   };
 
@@ -455,25 +365,4 @@ export async function getInactiveUsers(
   });
 
   return inactiveUsers;
-}
-
-/**
- * Get users with streaks at risk (haven't logged today and have active streak)
- */
-export async function getUsersWithStreaksAtRisk(): Promise<UserEngagementStats[]> {
-  const yesterday = getDateStringDaysAgo(1);
-
-  // Users who logged yesterday but not today (and have a streak > 0)
-  const atRiskSnapshot = await db
-    .collection("engagement_stats")
-    .where("lastActivityDate", "==", yesterday)
-    .where("currentStreak", ">", 0)
-    .get();
-
-  const atRiskUsers: UserEngagementStats[] = [];
-  atRiskSnapshot.forEach((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
-    atRiskUsers.push(doc.data() as UserEngagementStats);
-  });
-
-  return atRiskUsers;
 }

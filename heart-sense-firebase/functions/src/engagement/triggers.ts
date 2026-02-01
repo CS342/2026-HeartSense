@@ -45,7 +45,7 @@ export const onSymptomCreated = onDocumentCreated(
 
       logger.info(
         `Updated engagement stats for user ${userId}: ` +
-        `streak=${stats.currentStreak}, total=${stats.totalEntriesLogged}`
+        `total=${stats.totalEntriesLogged}, daysActive=${stats.totalDaysActive}`
       );
 
       // Process any new milestones
@@ -85,7 +85,7 @@ export const onActivityCreated = onDocumentCreated(
 
       logger.info(
         `Updated engagement stats for user ${userId}: ` +
-        `streak=${stats.currentStreak}, total=${stats.totalEntriesLogged}`
+        `total=${stats.totalEntriesLogged}, daysActive=${stats.totalDaysActive}`
       );
 
       // Process any new milestones
@@ -125,7 +125,7 @@ export const onWellbeingRatingCreated = onDocumentCreated(
 
       logger.info(
         `Updated engagement stats for user ${userId}: ` +
-        `streak=${stats.currentStreak}, total=${stats.totalEntriesLogged}`
+        `total=${stats.totalEntriesLogged}, daysActive=${stats.totalDaysActive}`
       );
 
       // Process any new milestones
@@ -165,7 +165,7 @@ export const onMedicalConditionCreated = onDocumentCreated(
 
       logger.info(
         `Updated engagement stats for user ${userId}: ` +
-        `streak=${stats.currentStreak}, total=${stats.totalEntriesLogged}`
+        `total=${stats.totalEntriesLogged}, daysActive=${stats.totalDaysActive}`
       );
 
       // Process any new milestones
@@ -202,7 +202,7 @@ async function processMilestones(
       await createEngagementAlert(
         userId,
         "milestone_reached",
-        `${displayInfo.emoji} ${displayInfo.title}`,
+        displayInfo.title,
         displayInfo.message,
         "medium",
         {milestoneType},
@@ -238,8 +238,6 @@ export const onUserProfileCreated = onDocumentCreated(
       // Create initial engagement stats
       await db.collection("engagement_stats").doc(userId).set({
         userId,
-        currentStreak: 0,
-        longestStreak: 0,
         totalEntriesLogged: 0,
         totalDaysActive: 0,
         lastActivityDate: null,
