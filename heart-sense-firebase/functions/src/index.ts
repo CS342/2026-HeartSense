@@ -1,32 +1,68 @@
 /**
- * Import function triggers from their respective submodules:
+ * HeartSense Firebase Cloud Functions
  *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ * This file exports all Cloud Functions for the HeartSense app.
+ * Functions are organized into modules for maintainability.
  */
 
+import * as admin from "firebase-admin";
 import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+// Initialize Firebase Admin SDK
+admin.initializeApp();
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+// Global options for all functions
+// Limit max instances for cost control
+setGlobalOptions({maxInstances: 10});
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// ============================================
+// Engagement Trigger Functions
+// ============================================
+// These functions automatically track engagement when users create entries
+export {
+  onSymptomCreated,
+  onActivityCreated,
+  onWellbeingRatingCreated,
+  onMedicalConditionCreated,
+  onUserProfileCreated,
+} from "./engagement/triggers";
+
+// ============================================
+// Engagement Scheduled Functions
+// ============================================
+// These functions run on a schedule for reminders, alerts, and maintenance
+export {
+  dailyReminderCheck,
+  inactivityAlertCheck,
+  streakAtRiskCheck,
+  weeklySummaryGeneration,
+  cleanupExpiredAlerts,
+  monthlyStatsReset,
+} from "./engagement/scheduled";
+
+// ============================================
+// Engagement API Functions (Callable)
+// ============================================
+// These functions can be called directly from the frontend
+export {
+  getEngagementStats,
+  getEngagementAlerts,
+  markAlertRead,
+  markAllAlertsRead,
+  getUserMilestones,
+  getEngagementLeaderboard,
+  getDailyEngagementHistory,
+  recalculateEngagementStats,
+  dismissAlert,
+} from "./engagement/api";
+
+// ============================================
+// Health Insights Functions
+// ============================================
+// Functions for generating and managing health insights
+export {
+  generateHealthInsights,
+  requestInsights,
+  getHealthInsights,
+  dismissInsight,
+} from "./engagement/insights";
