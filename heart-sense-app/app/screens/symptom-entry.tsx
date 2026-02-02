@@ -29,6 +29,79 @@ const SYMPTOM_TYPES = [
   'Other',
 ];
 
+const SEVERITY_DESCRIPTIONS: Record<string, Record<number, string>> = {
+  'Dizziness': {
+    1: 'No dizziness',
+    2: 'Mild lightheadedness, barely noticeable',
+    3: 'Moderate dizziness, can still perform daily tasks',
+    4: 'Severe dizziness, difficulty standing or walking',
+    5: 'Cannot function, need to lie down',
+  },
+  'Chest Pain': {
+    1: 'No pain',
+    2: 'Mild discomfort, barely noticeable',
+    3: 'Moderate pain but tolerable',
+    4: 'Severe pain, very distressing',
+    5: 'Worst pain imaginable, cannot function',
+  },
+  'Racing Heart': {
+    1: 'Normal heart rate',
+    2: 'Mildly elevated, barely noticeable',
+    3: 'Moderately fast, uncomfortable',
+    4: 'Very rapid heartbeat, distressing',
+    5: 'Heart racing uncontrollably, extremely distressing',
+  },
+  'Shortness of Breath': {
+    1: 'Breathing normally',
+    2: 'Mildly winded, minimal impact',
+    3: 'Moderate breathlessness, limits some activities',
+    4: 'Severe difficulty breathing, hard to talk',
+    5: 'Cannot breathe adequately, gasping',
+  },
+  'Palpitations': {
+    1: 'No palpitations',
+    2: 'Mild flutter, barely noticeable',
+    3: 'Moderate irregular heartbeat, uncomfortable',
+    4: 'Severe palpitations, very distressing',
+    5: 'Constant palpitations, cannot function',
+  },
+  'Fatigue': {
+    1: 'No fatigue, full energy',
+    2: 'Mildly tired but functional',
+    3: 'Moderately tired, need extra rest',
+    4: 'Severe exhaustion, can barely function',
+    5: 'Complete exhaustion, cannot get out of bed',
+  },
+  'Sense of Doom': {
+    1: 'No anxiety or dread',
+    2: 'Mild unease, barely noticeable',
+    3: 'Moderate anxiety or sense of dread',
+    4: 'Severe panic, overwhelming fear',
+    5: 'Extreme terror, complete sense of impending disaster',
+  },
+  'Weakness': {
+    1: 'No weakness, normal strength',
+    2: 'Mildly weak but functional',
+    3: 'Moderate weakness, some difficulty with activities',
+    4: 'Severe weakness, can barely move',
+    5: 'Complete weakness, cannot move',
+  },
+  'Loss of Vision': {
+    1: 'No vision problems',
+    2: 'Mild blurriness or spots',
+    3: 'Moderate vision changes or impairment',
+    4: 'Severe vision loss, nearly blind',
+    5: 'Complete loss of vision',
+  },
+  'Other': {
+    1: 'No symptoms',
+    2: 'Mild symptoms, barely noticeable',
+    3: 'Moderate symptoms, manageable',
+    4: 'Severe symptoms, very distressing',
+    5: 'Worst symptoms imaginable, cannot function',
+  },
+};
+
 interface PreviousSymptom {
   severity: number;
   occurredAt: string;
@@ -38,7 +111,7 @@ export default function SymptomEntry() {
   const { user } = useAuth();
   const router = useRouter();
   const [selectedType, setSelectedType] = useState('');
-  const [severity, setSeverity] = useState(5);
+  const [severity, setSeverity] = useState(3);
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -108,6 +181,11 @@ export default function SymptomEntry() {
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
+  };
+
+  const getSeverityDescription = () => {
+    if (!selectedType) return '';
+    return SEVERITY_DESCRIPTIONS[selectedType]?.[severity] || '';
   };
 
   const handleSubmit = async () => {
@@ -192,7 +270,7 @@ export default function SymptomEntry() {
             <View style={styles.previousSymptomContent}>
               <View style={styles.previousSymptomItem}>
                 <Text style={styles.previousSymptomLabel}>Last severity:</Text>
-                <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/10</Text>
+                <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/5</Text>
               </View>
               <View style={styles.previousSymptomItem}>
                 <Calendar color="#666" size={16} />
@@ -254,9 +332,9 @@ export default function SymptomEntry() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Severity (1-10)</Text>
+          <Text style={styles.label}>Severity (1-5)</Text>
           <View style={styles.severityContainer}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+            {[1, 2, 3, 4, 5].map((num) => (
               <TouchableOpacity
                 key={num}
                 style={[
@@ -276,6 +354,13 @@ export default function SymptomEntry() {
               </TouchableOpacity>
             ))}
           </View>
+          {selectedType && (
+            <View style={styles.severityDescriptionBox}>
+              <Text style={styles.severityDescriptionText}>
+                {getSeverityDescription()}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -366,12 +451,13 @@ const styles = StyleSheet.create({
   },
   severityContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    gap: 8,
   },
   severityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
@@ -383,12 +469,27 @@ const styles = StyleSheet.create({
     borderColor: '#0066cc',
   },
   severityText: {
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#666',
   },
   severityTextSelected: {
     color: '#fff',
     fontWeight: '600',
+  },
+  severityDescriptionBox: {
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  severityDescriptionText: {
+    fontSize: 15,
+    color: '#0c4a6e',
+    lineHeight: 22,
+    textAlign: 'center',
   },
   textArea: {
     borderWidth: 1,

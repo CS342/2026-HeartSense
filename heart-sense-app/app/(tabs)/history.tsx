@@ -62,7 +62,7 @@ export default function HistoryScreen() {
             id: s.id,
             type: 'symptom',
             title: s.symptomType,
-            description: s.description || `Severity: ${s.severity}/10`,
+            description: s.description || `Severity: ${s.severity}/5`,
             timestamp: s.occurredAt,
             details: s,
           });
