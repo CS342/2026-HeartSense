@@ -176,6 +176,87 @@ export const countActivitiesSince = async (userId: string, since: Date) => {
   }
 };
 
+export const countWellbeingRatings = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countWellbeingRatingsSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      where('recorded_at', '>=', Timestamp.fromDate(since))
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countMedicalChanges = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countMedicalChangesSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId),
+      where('occurred_at', '>=', Timestamp.fromDate(since))
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const getMedicalChanges = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId),
+      orderBy('occurred_at', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const changes = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        conditionType: data.condition_type,
+        description: data.description,
+        occurredAt: data.occurred_at ? data.occurred_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: changes, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
 export const logMedicalChange = async (data: MedicalConditionChange) => {
   try {
     const docRef = await addDoc(collection(db, 'medical_conditions'), {
@@ -187,6 +268,35 @@ export const logMedicalChange = async (data: MedicalConditionChange) => {
     return { id: docRef.id, error: null };
   } catch (error: any) {
     return { id: null, error: error.message || 'Failed to log medical change' };
+  }
+};
+
+export const getWellbeingRatings = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      orderBy('recorded_at', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        notes: data.notes ?? '',
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at ? data.recorded_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: ratings, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
   }
 };
 

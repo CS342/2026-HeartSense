@@ -27,6 +27,7 @@ import {
   getDocs,
   Timestamp,
 } from "firebase/firestore";
+import { countWellbeingRatings, countMedicalChanges } from "@/lib/symptomService";
 
 import {
   User,
@@ -245,17 +246,22 @@ export default function ProfileScreen() {
       // Fetch docs for counts + dates (using camelCase field name)
       const colNames = ["symptoms", "activities"];
 
-      const snaps = await Promise.all(
-        colNames.map((name) =>
-          getDocs(query(collection(db, name), where("userId", "==", user.uid)))
-        )
-      );
+      const [snapsRes, wellbeingRes, medicalRes] = await Promise.all([
+        Promise.all(
+          colNames.map((name) =>
+            getDocs(query(collection(db, name), where("userId", "==", user.uid)))
+          )
+        ),
+        countWellbeingRatings(user.uid),
+        countMedicalChanges(user.uid),
+      ]);
 
+      const snaps = snapsRes;
       console.log('loadAccountStats: Symptoms count:', snaps[0].docs.length);
       console.log('loadAccountStats: Activities count:', snaps[1].docs.length);
 
       const allDocs = snaps.flatMap((s) => s.docs.map((d) => d.data() as any));
-      const totalEntries = allDocs.length;
+      const totalEntries = allDocs.length + wellbeingRes.count + medicalRes.count;
 
       console.log('loadAccountStats: Total entries:', totalEntries);
       console.log('loadAccountStats: Sample doc:', allDocs[0]);
@@ -355,9 +361,9 @@ export default function ProfileScreen() {
             <Text style={styles.infoValue}>
               {stats.joinedDate
                 ? new Date(stats.joinedDate).toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })
+                  month: "long",
+                  year: "numeric",
+                })
                 : "-"}
             </Text>
           </View>
@@ -367,10 +373,10 @@ export default function ProfileScreen() {
             <Text style={styles.infoValue}>
               {stats.lastActivity
                 ? new Date(stats.lastActivity).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
                 : "No activity yet"}
             </Text>
           </View>
@@ -436,13 +442,13 @@ export default function ProfileScreen() {
                 <Text style={styles.fieldValue}>
                   {profile.date_of_birth
                     ? new Date(profile.date_of_birth).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        }
-                      )
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    )
                     : "Not set"}
                 </Text>
               )}

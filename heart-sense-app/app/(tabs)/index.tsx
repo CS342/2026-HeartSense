@@ -10,7 +10,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { countSymptomsSince, countActivitiesSince, getSymptoms, getActivities } from '@/lib/symptomService';
+import {
+  countSymptomsSince,
+  countActivitiesSince,
+  countWellbeingRatingsSince,
+  countMedicalChangesSince,
+  getSymptoms,
+  getActivities,
+  getWellbeingRatings,
+} from '@/lib/symptomService';
 import {
   Heart,
   Activity,
@@ -18,24 +26,30 @@ import {
   TrendingUp,
   AlertCircle,
   HelpCircle,
+  PersonStanding,
+  Zap,
+  Wind,
 } from 'lucide-react-native';
 
 interface QuickStats {
-  todaySymptoms: number;
-  todayRating: number | null;
-  todayActivities: number;
+  todayEntries: number;
   weeklyEntries: number;
 }
+
+type LatestWellbeing = {
+  energyLevel: number;
+  moodRating: number;
+  stressLevel: number;
+} | null;
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<QuickStats>({
-    todaySymptoms: 0,
-    todayRating: null,
-    todayActivities: 0,
+    todayEntries: 0,
     weeklyEntries: 0,
   });
+  const [latestWellbeing, setLatestWellbeing] = useState<LatestWellbeing>(null);
   const [loading, setLoading] = useState(true);
   const [daysSinceLastEntry, setDaysSinceLastEntry] = useState<number | null>(null);
 
@@ -62,30 +76,56 @@ export default function HomeScreen() {
       weekAgo.setDate(weekAgo.getDate() - 7);
       console.log('Week ago date:', weekAgo);
 
-      const [todaySymptomsRes, todayActivitiesRes, weeklySymptomsRes, weeklyActivitiesRes] = await Promise.all([
+      const [
+        todaySymptomsRes,
+        todayActivitiesRes,
+        todayWellbeingRes,
+        todayMedicalRes,
+        weeklySymptomsRes,
+        weeklyActivitiesRes,
+        weeklyWellbeingRes,
+        weeklyMedicalRes,
+        wellbeingRes,
+      ] = await Promise.all([
         countSymptomsSince(user.uid, today),
         countActivitiesSince(user.uid, today),
+        countWellbeingRatingsSince(user.uid, today),
+        countMedicalChangesSince(user.uid, today),
         countSymptomsSince(user.uid, weekAgo),
         countActivitiesSince(user.uid, weekAgo),
+        countWellbeingRatingsSince(user.uid, weekAgo),
+        countMedicalChangesSince(user.uid, weekAgo),
+        getWellbeingRatings(user.uid, 1),
       ]);
 
-      console.log('Today symptoms:', todaySymptomsRes);
-      console.log('Today activities:', todayActivitiesRes);
-      console.log('Weekly symptoms:', weeklySymptomsRes);
-      console.log('Weekly activities:', weeklyActivitiesRes);
+      const rating = wellbeingRes.data?.[0];
+      setLatestWellbeing(
+        rating
+          ? {
+            energyLevel: rating.energyLevel,
+            moodRating: rating.moodRating,
+            stressLevel: rating.stressLevel,
+          }
+          : null
+      );
+
+      const todayTotal =
+        todaySymptomsRes.count +
+        todayActivitiesRes.count +
+        todayWellbeingRes.count +
+        todayMedicalRes.count;
+      const weekTotal =
+        weeklySymptomsRes.count +
+        weeklyActivitiesRes.count +
+        weeklyWellbeingRes.count +
+        weeklyMedicalRes.count;
 
       setStats({
-        todaySymptoms: todaySymptomsRes.count,
-        todayRating: null, // Well-being ratings not implemented yet
-        todayActivities: todayActivitiesRes.count,
-        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
+        todayEntries: todayTotal,
+        weeklyEntries: weekTotal,
       });
 
-      console.log('Stats set:', {
-        todaySymptoms: todaySymptomsRes.count,
-        todayActivities: todayActivitiesRes.count,
-        weeklyEntries: weeklySymptomsRes.count + weeklyActivitiesRes.count,
-      });
+      console.log('Stats set:', { todayEntries: todayTotal, weeklyEntries: weekTotal });
 
       await checkLastEntry();
     } catch (error) {
@@ -161,13 +201,38 @@ export default function HomeScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>Today's Entries</Text>
-            <Text style={styles.statValue}>{stats.todaySymptoms + stats.todayActivities}</Text>
+            <Text style={styles.statValue}>{stats.todayEntries}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Well-being</Text>
-            <Text style={styles.statValue}>
-              {stats.todayRating ? `${stats.todayRating}/10` : '-'}
-            </Text>
+          <View style={[styles.statCard, styles.wellbeingCard]}>
+            {/* <Text style={styles.statLabel}>Well-being</Text> */}
+            {latestWellbeing ? (
+              <>
+                <View style={styles.wellbeingRow}>
+                  <View style={styles.labelRow}>
+                    <Zap color="#0066cc" size={20} />
+                    <Text style={styles.label}>Energy</Text>
+                  </View>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.energyLevel}</Text>
+                </View>
+                <View style={styles.wellbeingRow}>
+                  <View style={styles.labelRow}>
+                    <Wind color="#0066cc" size={20} />
+                    <Text style={styles.label}>Stress</Text>
+                  </View>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.stressLevel}</Text>
+                </View>
+                <View style={styles.wellbeingRow}>
+                  <View style={styles.labelRow}>
+                    <PersonStanding color="#0066cc" size={20} />
+                    <Text style={styles.label}>Mood</Text>
+                  </View>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.moodRating}</Text>
+                </View>
+
+              </>
+            ) : (
+              <Text style={styles.wellbeingEmpty}>No rating yet</Text>
+            )}
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>This Week</Text>
@@ -296,6 +361,39 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+  wellbeingCard: {
+    justifyContent: 'flex-start',
+  },
+  wellbeingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  wellbeingRowLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  wellbeingRowValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  wellbeingEmpty: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 12,
+    color: '#666',
   },
   section: {
     padding: 16,
