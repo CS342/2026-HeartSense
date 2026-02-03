@@ -20,6 +20,22 @@ export interface Activity {
   createdAt: Date;
 }
 
+export interface MedicalConditionChange {
+  userId: string;
+  conditionType: string;
+  description: string;
+  occurredAt: Date;
+}
+
+export interface WellbeingRating {
+  userId: string;
+  energyLevel: number; // 1-5
+  moodRating: number; // 1-5
+  notes: string;
+  stressLevel: number; // 1-5
+  recordedAt: Date;
+}
+
 export const logSymptom = async (symptomData: Omit<Symptom, 'createdAt'>) => {
   try {
     const docRef = await addDoc(collection(db, 'symptoms'), {
@@ -157,5 +173,35 @@ export const countActivitiesSince = async (userId: string, since: Date) => {
     return { count: querySnapshot.size, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
+  }
+};
+
+export const logMedicalChange = async (data: MedicalConditionChange) => {
+  try {
+    const docRef = await addDoc(collection(db, 'medical_conditions'), {
+      user_id: data.userId,
+      condition_type: data.conditionType,
+      description: data.description,
+      occurred_at: Timestamp.fromDate(data.occurredAt),
+    });
+    return { id: docRef.id, error: null };
+  } catch (error: any) {
+    return { id: null, error: error.message || 'Failed to log medical change' };
+  }
+};
+
+export const logWellbeingRating = async (data: WellbeingRating) => {
+  try {
+    const docRef = await addDoc(collection(db, 'well_being_ratings'), {
+      user_id: data.userId,
+      energy_level: data.energyLevel,
+      mood_rating: data.moodRating,
+      notes: data.notes || '',
+      stress_level: data.stressLevel,
+      recorded_at: Timestamp.fromDate(data.recordedAt),
+    });
+    return { id: docRef.id, error: null };
+  } catch (error: any) {
+    return { id: null, error: error.message || 'Failed to log well-being rating' };
   }
 };

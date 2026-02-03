@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { ArrowLeft } from 'lucide-react-native';
+import { logMedicalChange } from '@/lib/symptomService';
+import { ArrowLeft, Calendar } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const CONDITION_TYPES = [
   'New Medication',
@@ -62,15 +62,23 @@ export default function MedicalCondition() {
       return;
     }
 
+    const uid = user?.uid;
+    if (!uid) {
+      Alert.alert('Error', 'You must be signed in to log a medical change');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'medical_conditions'), {
-        user_id: user?.uid,
-        condition_type: selectedType,
-        description,
-        occurred_at: occurredAt.toISOString(),
+      const { error } = await logMedicalChange({
+        userId: uid,
+        conditionType: selectedType,
+        description: description.trim(),
+        occurredAt,
       });
+
+      if (error) throw new Error(error);
 
       Alert.alert('Success', 'Medical condition change logged successfully');
       router.back();
@@ -139,6 +147,7 @@ export default function MedicalCondition() {
               mode="datetime"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onPickerChange}
+              maximumDate={new Date()}
               textColor='black'
               accentColor='black'
             />

@@ -209,6 +209,7 @@ export default function ActivityEntry() {
                   mode="datetime"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onPickerChange}
+                  maximumDate={new Date()}
                   textColor='black'
                   accentColor='black'
                 />

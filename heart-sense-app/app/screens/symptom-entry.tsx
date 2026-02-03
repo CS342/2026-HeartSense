@@ -18,6 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const SYMPTOM_TYPES = [
   'Dizziness',
+  'Fainting',
   'Chest Pain',
   'Racing Heart',
   'Shortness of Breath',
@@ -36,6 +37,13 @@ const SEVERITY_DESCRIPTIONS: Record<string, Record<number, string>> = {
     3: 'Moderate dizziness, can still perform daily tasks',
     4: 'Severe dizziness, difficulty standing or walking',
     5: 'Cannot function, need to lie down',
+  },
+  'Fainting': {
+    1: 'No fainting',
+    2: 'Mild lightheadedness, barely noticeable',
+    3: 'Moderate fainting, need to lie down',
+    4: 'Severe fainting, cannot stand or walk',
+    5: 'Cannot function, intense pain',
   },
   'Chest Pain': {
     1: 'No pain',
@@ -315,6 +323,7 @@ export default function SymptomEntry() {
                   mode="datetime"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onPickerChange}
+                  maximumDate={new Date()}
                   textColor='black'
                   accentColor='black'
                 />
