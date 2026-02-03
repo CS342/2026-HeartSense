@@ -69,14 +69,6 @@ export default function HelpScreen() {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
 
-  const handleAskAI = () => {
-    Alert.alert(
-      'Ask AI Assistant',
-      'AI assistance feature coming soon. This will allow you to ask questions about your health tracking and get personalized insights.',
-      [{ text: 'OK' }]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -88,22 +80,6 @@ export default function HelpScreen() {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.aiButton} onPress={handleAskAI}>
-            <View style={styles.aiButtonContent}>
-              <View style={styles.aiIconContainer}>
-                <MessageCircle color="#fff" size={24} />
-              </View>
-              <View style={styles.aiTextContainer}>
-                <Text style={styles.aiButtonTitle}>Ask AI Assistant</Text>
-                <Text style={styles.aiButtonSubtitle}>
-                  Get quick answers to your health tracking questions
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
 
