@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { MessageSquare, X, Mail, MailOpen } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface Message {
   id: string;
@@ -96,7 +97,7 @@ export default function MessagesScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -112,7 +113,7 @@ export default function MessagesScreen() {
           )}
         </View>
         <View style={styles.headerIcon}>
-          <MessageSquare color="#0066cc" size={28} />
+          <MessageSquare color={theme.primary} size={28} />
         </View>
       </View>
 
@@ -140,7 +141,7 @@ export default function MessagesScreen() {
                   {message.read ? (
                     <MailOpen color="#999" size={24} />
                   ) : (
-                    <Mail color="#0066cc" size={24} />
+                    <Mail color={theme.primary} size={24} />
                   )}
                 </View>
                 <View style={styles.messageContent}>
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#e6f2ff',
+    backgroundColor: theme.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   unreadCount: {
     fontSize: 14,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
   scrollView: {
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e5e5',
   },
   messageCardUnread: {
-    borderColor: '#0066cc',
+    borderColor: theme.primary,
     borderLeftWidth: 4,
   },
   messageIcon: {
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     marginLeft: 8,
   },
   messageSubject: {
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   infoBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,

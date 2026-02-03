@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { HelpCircle, ChevronDown, ChevronUp, ArrowLeft, MessageCircle } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface FAQ {
   id: string;
@@ -80,7 +81,7 @@ export default function HelpScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#0066cc" size={24} />
+          <ArrowLeft color={theme.primary} size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & Support</Text>
         <View style={styles.placeholder} />
@@ -113,7 +114,7 @@ export default function HelpScreen() {
                 onPress={() => toggleFAQ(faq.id)}
               >
                 <View style={styles.faqQuestionContent}>
-                  <HelpCircle color="#0066cc" size={20} />
+                  <HelpCircle color={theme.primary} size={20} />
                   <Text style={styles.faqQuestionText}>{faq.question}</Text>
                 </View>
                 {expandedFAQ === faq.id ? (
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   aiButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   contactSection: {
     padding: 24,
     margin: 16,
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     borderRadius: 12,
     marginBottom: 32,
   },

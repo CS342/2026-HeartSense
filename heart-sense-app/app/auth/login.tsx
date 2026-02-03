@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Heart } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -52,9 +53,9 @@ export default function Login() {
       >
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Heart color="#0066cc" size={48} strokeWidth={2} />
+            <Heart color={theme.primary} size={48} strokeWidth={2} />
           </View>
-          <Text style={styles.title}>Medical Tracker</Text>
+          <Text style={styles.title}>Heart Sense</Text>
           <Text style={styles.subtitle}>Track your health journey</Text>
         </View>
 
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#e6f2ff',
+    backgroundColor: theme.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -166,14 +167,14 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 48,
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
   },
   buttonDisabled: {
-    backgroundColor: '#99c2e6',
+    backgroundColor: theme.primaryLight,
   },
   buttonText: {
     color: '#fff',
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#0066cc',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '500',
   },

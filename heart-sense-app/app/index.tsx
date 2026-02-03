@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { theme } from '@/theme/colors';
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -19,7 +20,7 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#0066cc" />
+      <ActivityIndicator size="large" color={theme.primary} />
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Heart } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 export default function Signup() {
   const [fullName, setFullName] = useState('');
@@ -63,7 +64,7 @@ export default function Signup() {
       >
         <View style={styles.header}>
           <View style={styles.iconContainer}>
-            <Heart color="#0066cc" size={48} strokeWidth={2} />
+            <Heart color={theme.primary} size={48} strokeWidth={2} />
           </View>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join us in tracking your health</Text>
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#e6f2ff',
+    backgroundColor: theme.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 48,
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#0066cc',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '500',
   },

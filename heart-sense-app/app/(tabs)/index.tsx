@@ -30,6 +30,7 @@ import {
   Zap,
   Wind,
 } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface QuickStats {
   todayEntries: number;
@@ -179,7 +180,7 @@ export default function HomeScreen() {
               <Text style={styles.subtitle}>How are you feeling today?</Text>
             </View>
             <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
-              <HelpCircle color="#0066cc" size={28} />
+              <HelpCircle color={theme.primary} size={28} />
             </TouchableOpacity>
           </View>
         </View>
@@ -209,21 +210,21 @@ export default function HomeScreen() {
               <>
                 <View style={styles.wellbeingRow}>
                   <View style={styles.labelRow}>
-                    <Zap color="#0066cc" size={20} />
+                    <Zap color={theme.primary} size={20} />
                     <Text style={styles.label}>Energy</Text>
                   </View>
                   <Text style={styles.wellbeingRowValue}>{latestWellbeing.energyLevel}</Text>
                 </View>
                 <View style={styles.wellbeingRow}>
                   <View style={styles.labelRow}>
-                    <Wind color="#0066cc" size={20} />
+                    <Wind color={theme.primary} size={20} />
                     <Text style={styles.label}>Stress</Text>
                   </View>
                   <Text style={styles.wellbeingRowValue}>{latestWellbeing.stressLevel}</Text>
                 </View>
                 <View style={styles.wellbeingRow}>
                   <View style={styles.labelRow}>
-                    <PersonStanding color="#0066cc" size={20} />
+                    <PersonStanding color={theme.primary} size={20} />
                     <Text style={styles.label}>Mood</Text>
                   </View>
                   <Text style={styles.wellbeingRowValue}>{latestWellbeing.moodRating}</Text>

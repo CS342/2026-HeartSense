@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logWellbeingRating } from '@/lib/symptomService';
 import { ArrowLeft, Zap, Wind, PersonStanding } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 const ENERGY_LEVELS = [
   { value: 1, label: 'Very low', description: 'Barely able to get through the day' },
@@ -94,7 +95,7 @@ export default function WellbeingRating() {
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <Zap color="#0066cc" size={20} />
+            <Zap color={theme.primary} size={20} />
             <Text style={styles.label}>Energy level (1–5)</Text>
           </View>
           <Text style={styles.description}>{selectedEnergy?.description}</Text>
@@ -124,7 +125,7 @@ export default function WellbeingRating() {
 
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <Wind color="#0066cc" size={20} />
+            <Wind color={theme.primary} size={20} />
             <Text style={styles.label}>Stress level (1–5)</Text>
           </View>
           <Text style={styles.description}>{selectedStress?.description}</Text>
@@ -154,7 +155,7 @@ export default function WellbeingRating() {
 
         <View style={styles.section}>
           <View style={styles.labelRow}>
-            <PersonStanding color="#0066cc" size={20} />
+            <PersonStanding color={theme.primary} size={20} />
             <Text style={styles.label}>Mood (1–5)</Text>
           </View>
           <Text style={styles.description}>{selectedMood?.description}</Text>
@@ -268,8 +269,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scaleButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   scaleButtonText: {
     fontSize: 18,
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   },
   scaleLabel: {
     fontSize: 13,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '500',
     marginTop: 8,
     textAlign: 'center',
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',

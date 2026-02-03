@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { theme } from '@/theme/colors';
 
 const SYMPTOM_TYPES = [
   'Dizziness',
@@ -272,7 +273,7 @@ export default function SymptomEntry() {
         {previousSymptom && (
           <View style={styles.previousSymptomBox}>
             <View style={styles.previousSymptomHeader}>
-              <TrendingUp color="#0066cc" size={18} />
+              <TrendingUp color={theme.primary} size={18} />
               <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
             </View>
             <View style={styles.previousSymptomContent}>
@@ -314,7 +315,7 @@ export default function SymptomEntry() {
                 onPress={() => setShowPicker(true)}
                 activeOpacity={0.7}
               >
-                <Clock color="#0066cc" size={20} />
+                <Clock color={theme.primary} size={20} />
                 <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
               </TouchableOpacity>
               {showPicker && (
@@ -447,8 +448,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   typeButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   typeButtonText: {
     fontSize: 14,
@@ -474,8 +475,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   severityButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   severityText: {
     fontSize: 18,
@@ -489,14 +490,14 @@ const styles = StyleSheet.create({
   severityDescriptionBox: {
     marginTop: 16,
     padding: 14,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: theme.primaryLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: theme.primary,
   },
   severityDescriptionText: {
     fontSize: 15,
-    color: '#0c4a6e',
+    color: theme.primary,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -510,7 +511,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -525,7 +526,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   previousSymptomBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
   previousSymptomTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0066cc',
+    color: theme.primary,
   },
   previousSymptomContent: {
     gap: 8,
@@ -584,7 +585,7 @@ const styles = StyleSheet.create({
   },
   donePickerText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
 });

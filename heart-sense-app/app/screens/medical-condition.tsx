@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logMedicalChange } from '@/lib/symptomService';
 import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { theme } from '@/theme/colors';
 
 const CONDITION_TYPES = [
   'New Medication',
@@ -138,7 +139,7 @@ export default function MedicalCondition() {
             onPress={() => setShowPicker(true)}
             activeOpacity={0.7}
           >
-            <Calendar color="#0066cc" size={20} />
+            <Calendar color={theme.primary} size={20} />
             <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
           </TouchableOpacity>
           {showPicker && (
@@ -218,14 +219,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   infoBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,
   },
   infoText: {
     fontSize: 14,
-    color: '#1e40af',
+    color: theme.primary,
     lineHeight: 20,
   },
   section: {
@@ -251,8 +252,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   typeButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   typeButtonText: {
     fontSize: 14,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   },
   donePickerText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
   textArea: {
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',

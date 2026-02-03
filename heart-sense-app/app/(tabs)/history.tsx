@@ -12,6 +12,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges } from '@/lib/symptomService';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface TimelineEntry {
   id: string;
@@ -136,7 +137,7 @@ export default function HistoryScreen() {
       case 'symptom':
         return <Heart color="#dc2626" size={20} />;
       case 'wellbeing':
-        return <TrendingUp color="#0066cc" size={20} />;
+        return <TrendingUp color={theme.primary} size={20} />;
       case 'activity':
         return <Activity color="#16a34a" size={20} />;
       case 'medical':
@@ -182,7 +183,7 @@ export default function HistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );

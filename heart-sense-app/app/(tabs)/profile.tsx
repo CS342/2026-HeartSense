@@ -39,6 +39,7 @@ import {
   BarChart3,
   Info,
 } from "lucide-react-native";
+import { theme } from "@/theme/colors";
 
 interface Profile {
   full_name: string;
@@ -333,7 +334,7 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <User color="#0066cc" size={48} />
+            <User color={theme.primary} size={48} />
           </View>
           <Text style={styles.userName}>{profile.full_name || "User"}</Text>
           <Text style={styles.userEmail}>{profile.email}</Text>
@@ -341,7 +342,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <BarChart3 color="#0066cc" size={20} />
+            <BarChart3 color={theme.primary} size={20} />
             <Text style={styles.sectionTitle}>Account Summary</Text>
           </View>
 
@@ -384,7 +385,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <User color="#0066cc" size={20} />
+            <User color={theme.primary} size={20} />
             <Text style={styles.sectionTitle}>Personal Information</Text>
           </View>
 
@@ -458,7 +459,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Bell color="#0066cc" size={20} />
+            <Bell color={theme.primary} size={20} />
             <Text style={styles.sectionTitle}>Notification Settings</Text>
           </View>
 
@@ -474,9 +475,9 @@ export default function ProfileScreen() {
               onValueChange={(value) =>
                 updateNotificationPreference("notify_daily_reminder", value)
               }
-              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
-                notifications.notify_daily_reminder ? "#0066cc" : "#f4f3f4"
+                notifications.notify_daily_reminder ? theme.primary : "#f4f3f4"
               }
             />
           </View>
@@ -493,9 +494,9 @@ export default function ProfileScreen() {
               onValueChange={(value) =>
                 updateNotificationPreference("notify_messages", value)
               }
-              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
-                notifications.notify_messages ? "#0066cc" : "#f4f3f4"
+                notifications.notify_messages ? theme.primary : "#f4f3f4"
               }
             />
           </View>
@@ -512,9 +513,9 @@ export default function ProfileScreen() {
               onValueChange={(value) =>
                 updateNotificationPreference("notify_health_insights", value)
               }
-              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
-                notifications.notify_health_insights ? "#0066cc" : "#f4f3f4"
+                notifications.notify_health_insights ? theme.primary : "#f4f3f4"
               }
             />
           </View>
@@ -531,9 +532,9 @@ export default function ProfileScreen() {
               onValueChange={(value) =>
                 updateNotificationPreference("notify_activity_milestones", value)
               }
-              trackColor={{ false: "#d1d5db", true: "#93c5fd" }}
+              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
-                notifications.notify_activity_milestones ? "#0066cc" : "#f4f3f4"
+                notifications.notify_activity_milestones ? theme.primary : "#f4f3f4"
               }
             />
           </View>
@@ -541,7 +542,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Info color="#0066cc" size={20} />
+            <Info color={theme.primary} size={20} />
             <Text style={styles.sectionTitle}>About</Text>
           </View>
 
@@ -632,7 +633,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "#e6f2ff",
+    backgroundColor: theme.primaryLight,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#0066cc",
+    color: theme.primary,
     marginBottom: 4,
   },
   statLabel: { fontSize: 12, color: "#666", textAlign: "center" },
@@ -679,7 +680,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 14, color: "#666" },
   infoValue: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
-  linkText: { fontSize: 14, fontWeight: "600", color: "#0066cc" },
+  linkText: { fontSize: 14, fontWeight: "600", color: theme.primary },
   field: {
     flexDirection: "row",
     paddingVertical: 16,
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
-  editButton: { backgroundColor: "#0066cc" },
+  editButton: { backgroundColor: theme.primary },
   saveButton: { backgroundColor: "#16a34a" },
   cancelButton: { backgroundColor: "#f3f4f6" },
   signOutButton: {

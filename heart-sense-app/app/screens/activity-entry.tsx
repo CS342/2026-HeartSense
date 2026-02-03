@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { logActivity } from '@/lib/symptomService';
 import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { theme } from '@/theme/colors';
 
 const ACTIVITY_TYPES = [
   'Exercise',
@@ -200,7 +201,7 @@ export default function ActivityEntry() {
                 onPress={() => setShowPicker(true)}
                 activeOpacity={0.7}
               >
-                <Calendar color="#0066cc" size={20} />
+                <Calendar color={theme.primary} size={20} />
                 <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
               </TouchableOpacity>
               {showPicker && (
@@ -312,8 +313,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   typeButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   typeButtonText: {
     fontSize: 14,
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
   },
   donePickerText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
   input: {
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',

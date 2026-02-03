@@ -1,13 +1,14 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Home, Plus, Clock, User, MessageSquare } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0066cc',
+        tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
           borderTopWidth: 1,
