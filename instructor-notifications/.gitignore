@@ -1,0 +1,12 @@
+## Dependencies
+node_modules/
+functions/node_modules/
+
+## Build output
+functions/lib/
+functions/.tsbuildinfo
+*.tsbuildinfo
+
+## Firebase / logs
+firebase-debug.log*
+.firebase/
