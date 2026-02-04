@@ -19,7 +19,6 @@ import {
   getActivities,
   getWellbeingRatings,
 } from '@/lib/symptomService';
-import { callFunction } from '@/lib/firebase';
 import {
   Heart,
   Activity,
@@ -30,7 +29,6 @@ import {
   PersonStanding,
   Zap,
   Wind,
-  Bell,
 } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
@@ -45,14 +43,6 @@ type LatestWellbeing = {
   stressLevel: number;
 } | null;
 
-interface EngagementAlert {
-  id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: { toDate?: () => Date } | string;
-}
-
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
@@ -63,34 +53,12 @@ export default function HomeScreen() {
   const [latestWellbeing, setLatestWellbeing] = useState<LatestWellbeing>(null);
   const [loading, setLoading] = useState(true);
   const [daysSinceLastEntry, setDaysSinceLastEntry] = useState<number | null>(null);
-  const [engagementAlerts, setEngagementAlerts] = useState<EngagementAlert[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       loadStats();
-      loadEngagementAlerts();
     }, [user])
   );
-
-  const loadEngagementAlerts = async () => {
-    if (!user) return;
-    try {
-      const result = await callFunction<{ limit?: number }, { alerts: EngagementAlert[]; unreadCount: number }>(
-        'getEngagementAlerts',
-        { limit: 20 }
-      );
-      setEngagementAlerts(result?.alerts ?? []);
-    } catch (e: unknown) {
-      const err = e as { code?: string; message?: string; details?: unknown };
-      console.error("[Home] getEngagementAlerts failed:", {
-        message: err?.message,
-        code: err?.code,
-        details: err?.details,
-        fullError: e,
-      });
-      setEngagementAlerts([]);
-    }
-  };
 
   const loadStats = async () => {
     if (!user) {
@@ -228,21 +196,6 @@ export default function HomeScreen() {
                 Regular tracking helps us better understand your health patterns. Please log your symptoms and well-being today.
               </Text>
             </View>
-          </View>
-        )}
-
-        {engagementAlerts.length > 0 && (
-          <View style={styles.engagementAlertsSection}>
-            <View style={styles.engagementAlertsHeader}>
-              <Bell color="#0066cc" size={20} />
-              <Text style={styles.engagementAlertsTitle}>Notifications</Text>
-            </View>
-            {engagementAlerts.slice(0, 5).map((alert) => (
-              <View key={alert.id} style={[styles.engagementAlertCard, !alert.read && styles.engagementAlertUnread]}>
-                <Text style={styles.engagementAlertTitle}>{alert.title}</Text>
-                <Text style={styles.engagementAlertMessage}>{alert.message}</Text>
-              </View>
-            ))}
           </View>
         )}
 
@@ -509,51 +462,6 @@ const styles = StyleSheet.create({
   alertText: {
     fontSize: 14,
     color: '#9a3412',
-    lineHeight: 20,
-  },
-  engagementAlertsSection: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  engagementAlertsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  engagementAlertsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  engagementAlertCard: {
-    paddingVertical: 12,
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  engagementAlertUnread: {
-    backgroundColor: '#eff6ff',
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-    marginBottom: 0,
-    borderLeftWidth: 3,
-    borderLeftColor: '#0066cc',
-  },
-  engagementAlertTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  engagementAlertMessage: {
-    fontSize: 14,
-    color: '#666',
     lineHeight: 20,
   },
 });

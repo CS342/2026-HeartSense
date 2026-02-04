@@ -30,10 +30,6 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { countWellbeingRatings, countMedicalChanges } from "@/lib/symptomService";
-import { callFunction } from "@/lib/firebase";
-import { callNotificationFunction } from "@/lib/firebaseNotifications";
-import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
 
 import {
   User,
@@ -139,10 +135,6 @@ export default function ProfileScreen() {
       setProfile((prev) => ({ ...prev, date_of_birth: `${yyyy}-${mm}-${dd}` }));
     }
   };
-  const [sendingTestNotification, setSendingTestNotification] = useState(false);
-  const [pushToken, setPushToken] = useState("");
-  const [sendingTestPush, setSendingTestPush] = useState(false);
-  const [fetchingPushToken, setFetchingPushToken] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -619,135 +611,6 @@ export default function ProfileScreen() {
               }
             />
           </View>
-
-          <TouchableOpacity
-            style={styles.testNotificationButton}
-            onPress={async () => {
-              if (!user || sendingTestNotification) return;
-              setSendingTestNotification(true);
-              try {
-                await callFunction("sendTestNotificationNow");
-                Alert.alert(
-                  "Notification sent",
-                  "A test notification was sent. Open the Home tab to see it."
-                );
-              } catch (e: any) {
-                console.error("[Profile] sendTestNotificationNow failed:", {
-                  message: e?.message,
-                  code: e?.code,
-                  details: e?.details,
-                  stack: e?.stack,
-                  fullError: e,
-                });
-                Alert.alert("Error", e?.message || "Failed to send test notification");
-              } finally {
-                setSendingTestNotification(false);
-              }
-            }}
-            disabled={sendingTestNotification}
-          >
-            <Bell color="#0066cc" size={20} />
-            <Text style={styles.testNotificationButtonText}>
-              {sendingTestNotification ? "Sending…" : "Send test notification now"}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.pushTestSection}>
-            <Text style={styles.pushTestTitle}>Test push (instructor's project)</Text>
-            <Text style={styles.pushTestHint}>
-              Tap "Get my push token" to use this device's Expo push token (recommended). Or paste an FCM token. Use a real device; simulators don't support push.
-            </Text>
-            <TouchableOpacity
-              style={[styles.testNotificationButton, styles.pushTestButton]}
-              onPress={async () => {
-                if (fetchingPushToken) return;
-                setFetchingPushToken(true);
-                try {
-                  const { status } = await Notifications.requestPermissionsAsync();
-                  if (status !== "granted") {
-                    Alert.alert(
-                      "Permission needed",
-                      "Enable notifications in Settings to get your push token."
-                    );
-                    setFetchingPushToken(false);
-                    return;
-                  }
-                  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-                  if (!projectId || projectId === "YOUR_EXPO_PROJECT_ID") {
-                    Alert.alert(
-                      "Expo project ID needed",
-                      "Add your Expo project ID in app.config.js (extra.eas.projectId). Find it at expo.dev → your project → Overview."
-                    );
-                    setFetchingPushToken(false);
-                    return;
-                  }
-                  const token = await Notifications.getExpoPushTokenAsync({ projectId });
-                  console.log("[Profile] Got Expo push token:", token.data);
-                  setPushToken(token.data);
-                  Alert.alert("Token ready", "Expo push token is in the field below. Tap \"Send test push\" to try it.");
-                } catch (e: any) {
-                  console.error("[Profile] getExpoPushTokenAsync failed:", e);
-                  Alert.alert(
-                    "Could not get token",
-                    e?.message || "Use a real device (not simulator) and ensure notifications are allowed."
-                  );
-                } finally {
-                  setFetchingPushToken(false);
-                }
-              }}
-              disabled={fetchingPushToken}
-            >
-              <Text style={styles.testNotificationButtonText}>
-                {fetchingPushToken ? "Getting token…" : "Get my push token"}
-              </Text>
-            </TouchableOpacity>
-            <TextInput
-              style={styles.pushTokenInput}
-              value={pushToken}
-              onChangeText={setPushToken}
-              placeholder="FCM device token (tap above or paste)"
-              placeholderTextColor="#999"
-              autoCapitalize="none"
-              autoCorrect={false}
-              multiline
-            />
-            <TouchableOpacity
-              style={[styles.testNotificationButton, styles.pushTestButton]}
-              onPress={async () => {
-                const token = pushToken.trim();
-                if (!token) {
-                  Alert.alert("Missing token", "Paste your FCM token above first.");
-                  return;
-                }
-                if (sendingTestPush) return;
-                setSendingTestPush(true);
-                try {
-                  console.log("[Profile] Sending push with token:", token.slice(0, 30) + "...");
-                  const result = await callNotificationFunction("sendPushNotification", {
-                    token,
-                    title: "HeartSense Test",
-                    body: "If you see this, push notifications work!",
-                  });
-                  if (result && (result as { success?: boolean }).success !== false) {
-                    Alert.alert("Sent", "Test push was sent. Check your device for the notification.");
-                  } else {
-                    const err = (result as { error?: string })?.error;
-                    Alert.alert("Error", err || "Failed to send push.");
-                  }
-                } catch (e: any) {
-                  console.error("[Profile] sendPushNotification failed:", e?.message, e);
-                  Alert.alert("Error", e?.message || "Failed to send test push");
-                } finally {
-                  setSendingTestPush(false);
-                }
-              }}
-              disabled={sendingTestPush}
-            >
-              <Text style={styles.testNotificationButtonText}>
-                {sendingTestPush ? "Sending…" : "Send test push"}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
 
         <View style={styles.section}>
@@ -937,56 +800,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f3f4f6",
   },
   settingContent: { flex: 1, marginRight: 12 },
-  testNotificationButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: "#eff6ff",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#93c5fd",
-  },
-  testNotificationButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0066cc",
-  },
-  pushTestSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e5e5",
-  },
-  pushTestTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 8,
-  },
-  pushTestHint: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  pushTokenInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    backgroundColor: "#f9f9f9",
-    marginBottom: 12,
-    minHeight: 44,
-  },
-  pushTestButton: {
-    marginTop: 0,
-  },
   settingTitle: {
     fontSize: 15,
     fontWeight: "600",
