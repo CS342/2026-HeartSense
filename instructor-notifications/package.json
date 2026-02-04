@@ -1,0 +1,9 @@
+{
+  "name": "instructor-notifications",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix functions",
+    "deploy": "firebase deploy --only functions --project cs342-2026-wong-3qriyd12e",
+    "project": "firebase use"
+  }
+}
