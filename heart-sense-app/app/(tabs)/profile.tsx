@@ -10,7 +10,9 @@ import {
   TextInput,
   Alert,
   Switch,
+  Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -73,6 +75,16 @@ function toJSDate(value: any): Date | null {
   return d;
 }
 
+/** Parse "YYYY-MM-DD" as local date (avoids UTC midnight shifting display by a day). */
+function parseLocalDate(isoDateStr: string): Date | null {
+  if (!isoDateStr) return null;
+  const parts = isoDateStr.split("-").map(Number);
+  const [y, m, d] = parts;
+  if (y == null || m == null || d == null || parts.some(isNaN)) return null;
+  const date = new Date(y, m - 1, d);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -99,6 +111,30 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
+
+  const defaultDobDate = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 25);
+    return d;
+  })();
+  const dobDate = (() => {
+    const d = parseLocalDate(profile.date_of_birth);
+    return d ?? defaultDobDate;
+  })();
+
+  const onDobPickerChange = (
+    event: { type: string },
+    date?: Date
+  ) => {
+    if (Platform.OS === "android") setShowDobPicker(false);
+    if (event.type !== "dismissed" && date) {
+      const yyyy = date.getUTCFullYear();
+      const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(date.getUTCDate()).padStart(2, "0");
+      setProfile((prev) => ({ ...prev, date_of_birth: `${yyyy}-${mm}-${dd}` }));
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -303,6 +339,7 @@ export default function ProfileScreen() {
       });
 
       setEditing(false);
+      setShowDobPicker(false);
       await loadProfile();
     } catch (error: any) {
       Alert.alert("Error", error?.message || "Failed to update profile");
@@ -430,19 +467,55 @@ export default function ProfileScreen() {
             <View style={styles.fieldContent}>
               <Text style={styles.fieldLabel}>Date of Birth</Text>
               {editing ? (
-                <TextInput
-                  style={styles.input}
-                  value={profile.date_of_birth}
-                  onChangeText={(text) =>
-                    setProfile({ ...profile, date_of_birth: text })
-                  }
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999"
-                />
+                <>
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setShowDobPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={
+                        profile.date_of_birth
+                          ? styles.fieldValue
+                          : styles.inputPlaceholder
+                      }
+                    >
+                      {profile.date_of_birth
+                        ? (parseLocalDate(profile.date_of_birth) ?? new Date()).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                        : "Tap to select date"}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDobPicker && (
+                    <DateTimePicker
+                      value={dobDate}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={onDobPickerChange}
+                      maximumDate={new Date()}
+                      minimumDate={
+                        new Date(new Date().setFullYear(new Date().getFullYear() - 120))
+                      }
+                      textColor='black'
+                      accentColor='black'
+                    />
+                  )}
+                  {Platform.OS === "ios" && showDobPicker && (
+                    <TouchableOpacity
+                      style={styles.donePickerButton}
+                      onPress={() => setShowDobPicker(false)}
+                    >
+                      <Text style={styles.donePickerText}>Done</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               ) : (
                 <Text style={styles.fieldValue}>
                   {profile.date_of_birth
-                    ? new Date(profile.date_of_birth).toLocaleDateString(
+                    ? (parseLocalDate(profile.date_of_birth) ?? new Date()).toLocaleDateString(
                       "en-US",
                       {
                         month: "long",
@@ -547,10 +620,6 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>App Version</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
-          </View>
-          <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Data Privacy</Text>
             <TouchableOpacity>
               <Text style={styles.linkText}>View Policy</Text>
@@ -581,6 +650,7 @@ export default function ProfileScreen() {
               style={[styles.button, styles.cancelButton]}
               onPress={() => {
                 setEditing(false);
+                setShowDobPicker(false);
                 loadProfile();
               }}
               disabled={loading}
@@ -700,6 +770,9 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#f9f9f9",
   },
+  inputPlaceholder: { fontSize: 16, color: "#999" },
+  donePickerButton: { alignItems: "center", paddingVertical: 12 },
+  donePickerText: { fontSize: 16, color: theme.primary, fontWeight: "600" },
   buttonContainer: { padding: 16, gap: 12 },
   button: {
     flexDirection: "row",

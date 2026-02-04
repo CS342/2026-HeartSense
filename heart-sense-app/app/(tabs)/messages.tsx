@@ -31,6 +31,7 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -50,7 +51,8 @@ export default function MessagesScreen() {
       const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
       setMessages(rows as Message[]);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.log('Error loading messages:', error);
+      setError('Error loading messages');
     } finally {
       setLoading(false);
     }
@@ -98,6 +100,22 @@ export default function MessagesScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>MyHealth Messages coming soon!</Text>
+          <Text style={styles.errorText}>
+            Messages from your healthcare providers will appear here
+          </Text>
+          <Text style={styles.errorText}>
+            Please check back later.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -395,5 +413,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1e40af',
     lineHeight: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: theme.primary,
+    marginBottom: 8,
   },
 });
