@@ -135,12 +135,12 @@ export const inactivityAlertCheck = onSchedule(
         }
 
         // Calculate days inactive
-        const lastActive = user.lastActivityDate ?
-          new Date(user.lastActivityDate) :
-          null;
-        const daysInactive = lastActive ?
-          Math.floor((Date.now() - lastActive.getTime()) / (24 * 60 * 60 * 1000)) :
-          0;
+        const lastActive = user.lastActivityDate
+          ? new Date(user.lastActivityDate)
+          : null;
+        const daysInactive = lastActive
+          ? Math.floor((Date.now() - lastActive.getTime()) / (24 * 60 * 60 * 1000))
+          : 0;
 
         if (daysInactive < DEFAULT_ENGAGEMENT_CONFIG.inactivityThresholdDays) {
           continue;

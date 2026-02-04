@@ -8,22 +8,22 @@ import {Timestamp} from "firebase-admin/firestore";
 // User engagement stats document stored in Firestore
 export interface UserEngagementStats {
   userId: string;
-  totalEntriesLogged: number; // Total symptoms + activities + wellbeing
-  totalDaysActive: number; // Unique days with at least one entry
+  totalEntriesLogged: number;     // Total symptoms + activities + wellbeing
+  totalDaysActive: number;        // Unique days with at least one entry
   lastActivityDate: string | null; // ISO date of last entry
   lastActivityTimestamp: Timestamp | null;
-  weeklyEntryCount: number; // Entries in the last 7 days
-  monthlyEntryCount: number; // Entries in the last 30 days
+  weeklyEntryCount: number;       // Entries in the last 7 days
+  monthlyEntryCount: number;      // Entries in the last 30 days
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 // Engagement alert types
 export type AlertType =
-  | "inactivity_warning" // User hasn't logged in X days
-  | "milestone_reached" // General milestone (entries, days active)
-  | "weekly_summary" // Weekly engagement summary
-  | "health_insight"; // Generated health insight
+  | "inactivity_warning"      // User hasn't logged in X days
+  | "milestone_reached"       // General milestone (entries, days active)
+  | "weekly_summary"          // Weekly engagement summary
+  | "health_insight";         // Generated health insight
 
 // Engagement alert document
 export interface EngagementAlert {
@@ -34,7 +34,7 @@ export interface EngagementAlert {
   message: string;
   priority: "low" | "medium" | "high";
   read: boolean;
-  actionUrl?: string; // Deep link to relevant app section
+  actionUrl?: string;          // Deep link to relevant app section
   metadata?: Record<string, unknown>;
   expiresAt?: Timestamp;
   createdAt: Timestamp;
@@ -42,14 +42,14 @@ export interface EngagementAlert {
 
 // Milestone types for achievement tracking
 export type MilestoneType =
-  | "first_entry" // First ever log
-  | "entries_10" // 10 total entries
-  | "entries_50" // 50 total entries
-  | "entries_100" // 100 total entries
-  | "entries_500" // 500 total entries
-  | "days_active_7" // 7 unique days active
-  | "days_active_30" // 30 unique days active
-  | "days_active_100"; // 100 unique days active
+  | "first_entry"             // First ever log
+  | "entries_10"              // 10 total entries
+  | "entries_50"              // 50 total entries
+  | "entries_100"             // 100 total entries
+  | "entries_500"             // 500 total entries
+  | "days_active_7"           // 7 unique days active
+  | "days_active_30"          // 30 unique days active
+  | "days_active_100";        // 100 unique days active
 
 // User milestone achievement record
 export interface UserMilestone {
@@ -63,7 +63,7 @@ export interface UserMilestone {
 // Daily engagement log for tracking unique active days
 export interface DailyEngagementLog {
   userId: string;
-  date: string; // YYYY-MM-DD format
+  date: string;                // YYYY-MM-DD format
   entryCount: number;
   symptomCount: number;
   activityCount: number;
@@ -89,9 +89,9 @@ export interface HealthInsight {
 
 // Configuration for engagement features
 export interface EngagementConfig {
-  inactivityThresholdDays: number; // Days before inactivity alert (default: 2)
-  dailyReminderHour: number; // Hour of day for daily reminder (default: 9)
-  weeklyInsightDay: number; // Day of week for weekly insights (0=Sunday, default: 1)
+  inactivityThresholdDays: number;       // Days before inactivity alert (default: 2)
+  dailyReminderHour: number;             // Hour of day for daily reminder (default: 9)
+  weeklyInsightDay: number;              // Day of week for weekly insights (0=Sunday, default: 1)
   enabledAlertTypes: AlertType[];
 }
 

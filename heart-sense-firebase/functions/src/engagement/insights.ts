@@ -278,17 +278,17 @@ function analyzeActivityPatterns(
   if (weeklyAverage >= 150) {
     title = "Great Activity Level!";
     description = `You're averaging ${Math.round(weeklyAverage)} minutes of activity per week. `;
-    description += "That's meeting the recommended 150 minutes of weekly exercise! ";
+    description += `That's meeting the recommended 150 minutes of weekly exercise! `;
     description += `Your most frequent activity is "${mostCommonActivity}". Keep it up!`;
   } else if (weeklyAverage >= 75) {
     title = "Good Progress on Activity";
     description = `You're averaging ${Math.round(weeklyAverage)} minutes of activity per week. `;
-    description += "You're halfway to the recommended 150 minutes! ";
+    description += `You're halfway to the recommended 150 minutes! `;
     description += `Try adding one more session of "${mostCommonActivity}" to boost your total.`;
   } else if (activities.length > 0) {
     title = "Activity Opportunity";
     description = `You've logged ${Math.round(weeklyAverage)} minutes of weekly activity. `;
-    description += "Small increases can make a big difference. ";
+    description += `Small increases can make a big difference. `;
     description += `Even 10-15 minute sessions of "${mostCommonActivity}" add up over time!`;
   } else {
     return null;
@@ -382,14 +382,14 @@ function analyzeSymptomActivityCorrelation(
 
   if (difference > 0.5) {
     title = "Activity May Help Your Symptoms";
-    description = "On days when you're active, your average symptom severity is ";
+    description = `On days when you're active, your average symptom severity is `;
     description += `${activeDayAvg.toFixed(1)}/10, compared to ${inactiveDayAvg.toFixed(1)}/10 on inactive days. `;
-    description += "This suggests physical activity might help manage your symptoms.";
+    description += `This suggests physical activity might help manage your symptoms.`;
   } else {
     title = "Rest Days Matter";
-    description = "On rest days, your average symptom severity is ";
+    description = `On rest days, your average symptom severity is `;
     description += `${inactiveDayAvg.toFixed(1)}/10, compared to ${activeDayAvg.toFixed(1)}/10 on active days. `;
-    description += "Consider balancing activity with adequate rest.";
+    description += `Consider balancing activity with adequate rest.`;
   }
 
   return {
