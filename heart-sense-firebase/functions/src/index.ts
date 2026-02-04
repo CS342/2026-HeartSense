@@ -37,7 +37,6 @@ export {
   weeklySummaryGeneration,
   cleanupExpiredAlerts,
   monthlyStatsReset,
-  testNotificationAt230,
 } from "./engagement/scheduled";
 
 // ============================================
@@ -53,8 +52,6 @@ export {
   getDailyEngagementHistory,
   recalculateEngagementStats,
   dismissAlert,
-  sendTestNotificationNow,
-  scheduleTestNotificationAt230,
 } from "./engagement/api";
 
 // ============================================

@@ -1,20 +1,19 @@
 export default {
   expo: {
-    name: "Heart Sense",
-    slug: "heart-sense",
+    name: "Medical Tracker",
+    slug: "medical-tracker",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
-    owner: "jasminetostado",
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.heartsense.app"
+      bundleIdentifier: "com.medicaltracker.app"
     },
     android: {
-      package: "com.heartsense.app",
+      package: "com.medicaltracker.app",
       adaptiveIcon: {
         foregroundImage: "./assets/images/icon.png",
         backgroundColor: "#ffffff"
@@ -25,14 +24,11 @@ export default {
       output: "single",
       favicon: "./assets/images/favicon.png"
     },
-    plugins: ["expo-router", "expo-font", "expo-web-browser", "expo-notifications"],
+    plugins: ["expo-router", "expo-font", "expo-web-browser"],
     experiments: {
       typedRoutes: true
     },
     extra: {
-      eas: {
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID || "4171cdf0-600d-4f1f-8fbd-209ec90d4982"
-      }
     }
   }
 };

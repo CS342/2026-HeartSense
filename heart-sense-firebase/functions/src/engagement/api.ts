@@ -12,7 +12,6 @@ import {
   recalculateWeeklyCount,
   recalculateMonthlyCount,
   getDateStringDaysAgo,
-  createEngagementAlert,
 } from "../utils/engagementUtils";
 import {UserEngagementStats, EngagementAlert, UserMilestone} from "../types/engagement";
 
@@ -350,61 +349,6 @@ export const dismissAlert = onCall(
     } catch (error) {
       logger.error(`Error dismissing alert: ${error}`);
       return {success: false, error: "Failed to dismiss alert"};
-    }
-  }
-);
-
-/**
- * Send a test notification (engagement alert) to the current user immediately.
- * Use this to verify that notifications appear in the app (e.g. Messages tab).
- */
-export const sendTestNotificationNow = onCall(
-  async (request: CallableRequest): Promise<{success: boolean; error?: string}> => {
-    const auth = request.auth;
-    if (!auth) {
-      return {success: false, error: "Authentication required"};
-    }
-
-    try {
-      await createEngagementAlert(
-        auth.uid,
-        "inactivity_warning",
-        "Test notification",
-        "This is a test. If you see this, the notification flow works!",
-        "low",
-        {type: "test_now"},
-        24
-      );
-      return {success: true};
-    } catch (error) {
-      logger.error(`Error sending test notification: ${error}`);
-      return {success: false, error: "Failed to send test notification"};
-    }
-  }
-);
-
-/**
- * Register current user to receive a test notification at 2:30 PM (Pacific).
- * Call this once from the app; the scheduled job will send one engagement alert at 2:30 PM.
- * Remove config after sending so it does not repeat every day.
- */
-export const scheduleTestNotificationAt230 = onCall(
-  async (request: CallableRequest): Promise<{success: boolean; error?: string}> => {
-    const auth = request.auth;
-    if (!auth) {
-      return {success: false, error: "Authentication required"};
-    }
-
-    try {
-      await db.collection("config").doc("test_notification").set({
-        userId: auth.uid,
-        scheduledFor: "2:30 PM America/Los_Angeles",
-        createdAt: Timestamp.now(),
-      });
-      return {success: true};
-    } catch (error) {
-      logger.error(`Error scheduling test notification: ${error}`);
-      return {success: false, error: "Failed to schedule test notification"};
     }
   }
 );

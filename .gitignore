@@ -1,5 +1,1 @@
 .DS_Store
-
-# Dependencies (ignore anywhere in repo)
-node_modules/
-**/node_modules/
