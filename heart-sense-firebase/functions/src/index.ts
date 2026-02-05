@@ -64,3 +64,9 @@ export {
   getHealthInsights,
   dismissInsight,
 } from "./engagement/insights";
+
+// ============================================
+// Push Notification Functions
+// ============================================
+// Sends push notifications via FCM or Expo Push API
+export {sendPushNotification} from "./notifications/push";
