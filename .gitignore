@@ -1,2 +1,5 @@
 .DS_Store
 node_modules/
+
+# Migrated to heart-sense-firebase - no longer used
+instructor-notifications/
