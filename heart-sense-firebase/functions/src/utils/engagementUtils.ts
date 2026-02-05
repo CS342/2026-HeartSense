@@ -78,19 +78,19 @@ export async function updateEngagementStats(
 
   return await db.runTransaction(async (transaction: Transaction) => {
     const statsDoc = await transaction.get(statsRef);
-    const stats = statsDoc.exists
-      ? (statsDoc.data() as UserEngagementStats)
-      : {
-          userId,
-          totalEntriesLogged: 0,
-          totalDaysActive: 0,
-          lastActivityDate: null,
-          lastActivityTimestamp: null,
-          weeklyEntryCount: 0,
-          monthlyEntryCount: 0,
-          createdAt: now,
-          updatedAt: now,
-        };
+    const stats = statsDoc.exists ?
+      (statsDoc.data() as UserEngagementStats) :
+      {
+        userId,
+        totalEntriesLogged: 0,
+        totalDaysActive: 0,
+        lastActivityDate: null,
+        lastActivityTimestamp: null,
+        weeklyEntryCount: 0,
+        monthlyEntryCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
 
     // Update entry counts
     const previousTotal = stats.totalEntriesLogged;
@@ -101,9 +101,9 @@ export async function updateEngagementStats(
     // Check for entry milestones
     for (const milestone of ENTRY_MILESTONES) {
       if (previousTotal < milestone && stats.totalEntriesLogged >= milestone) {
-        const milestoneType = milestone === 1
-          ? "first_entry"
-          : (`entries_${milestone}` as MilestoneType);
+        const milestoneType = milestone === 1 ?
+          "first_entry" :
+          (`entries_${milestone}` as MilestoneType);
         newMilestones.push(milestoneType);
       }
     }
