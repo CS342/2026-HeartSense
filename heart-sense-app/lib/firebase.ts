@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB3mCwXJEduzAKzgjikiKEbsk7mW3___5o",
@@ -15,4 +16,10 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+const functions = getFunctions(app);
+export const sendPushNotificationCallable = httpsCallable<
+  { token: string; title?: string; body?: string },
+  { success: boolean; messageId?: string; error?: string }
+>(functions, "sendPushNotification");
 
