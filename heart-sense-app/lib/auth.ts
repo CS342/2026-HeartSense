@@ -15,6 +15,7 @@ export async function signup(email: string, password: string, fullName: string) 
     gender: null,
     height_cm: null,
     weight_kg: null,
+    onboarding_completed: false,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });

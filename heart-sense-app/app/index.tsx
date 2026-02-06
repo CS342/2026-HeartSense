@@ -2,21 +2,30 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { theme } from '@/theme/colors';
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { onboardingCompleted, loading: onboardingLoading } = useOnboarding();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/login');
-      }
+    if (authLoading || (user && onboardingLoading)) return;
+
+    if (!user) {
+      router.replace('/auth/login');
+      return;
     }
-  }, [user, loading]);
+
+    // Send to onboarding if not completed (false) or unknown (null - e.g. legacy user or fetch error)
+    if (onboardingCompleted !== true) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    router.replace('/(tabs)');
+  }, [user, authLoading, onboardingCompleted, onboardingLoading]);
 
   return (
     <View style={styles.container}>
