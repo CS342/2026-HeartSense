@@ -49,7 +49,7 @@ export interface MedicalCondition {
 export interface HealthData {
   id: string;
   user_id: string;
-  data_type: 'heart_rate' | 'step_count' | 'accelerometer';
+  data_type: 'heartRate' | 'restingHeartRate' | 'heartRateVariability' | 'respiratoryRate' | 'stepCount' | 'heart_rate' | 'step_count' | 'accelerometer';
   value: number;
   unit: string;
   recorded_at: string;
