@@ -1,95 +1,78 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+/**
+ * HealthDataTracker — headless component that bridges HealthKit → Firebase.
+ *
+ * Mount this once inside a provider that supplies AuthContext.
+ * It requests HealthKit permissions, periodically reads the latest vitals,
+ * and writes new samples to the `health_data` Firestore collection.
+ *
+ * Renders nothing — pure side-effect component.
+ */
+import { useEffect, useRef, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { useHealthKit } from '@/hooks/useHealthKit';
+import type { LatestVitals, VitalsSample } from '@/services/healthkit';
 
-interface HealthDataTrackerProps {
-  onDataCollected?: (data: any) => void;
-}
+const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 min
 
-export function HealthDataTracker({ onDataCollected }: HealthDataTrackerProps) {
+export function HealthDataTracker() {
   const { user } = useAuth();
-  const [isTracking, setIsTracking] = useState(false);
+  const { isAvailable, isAuthorized, vitals, refresh } = useHealthKit();
 
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      return;
-    }
+  // Track what we've already persisted to avoid duplicate writes
+  const lastSaved = useRef<Record<string, string>>({});
 
-    startTracking();
+  const persistSample = useCallback(
+    async (sample: VitalsSample) => {
+      if (!user) return;
 
-    return () => {
-      stopTracking();
-    };
-  }, []);
+      // De-dup key: type + startDate
+      const key = `${sample.type}:${sample.startDate}`;
+      if (lastSaved.current[key]) return;
+      lastSaved.current[key] = sample.startDate;
 
-  const startTracking = async () => {
-    setIsTracking(true);
-  };
-
-  const stopTracking = () => {
-    setIsTracking(false);
-  };
-
-  const saveHealthData = async (dataType: string, value: number, unit: string) => {
-    if (!user) return;
-
-    try {
-      await addDoc(collection(db, 'health_data'), {
-        user_id: user.uid,
-        data_type: dataType,
-        value,
-        unit,
-        recorded_at: new Date().toISOString(),
-      });
-
-      onDataCollected?.({ dataType, value, unit });
-    } catch (error) {
-      console.error('Error saving health data:', error);
-    }
-  };
-
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.infoText}>
-          Health data tracking is available on mobile devices
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.statusText}>
-        Health tracking: {isTracking ? 'Active' : 'Inactive'}
-      </Text>
-      <Text style={styles.infoText}>
-        This app can collect step count, heart rate, and accelerometer data from your device.
-        Enable permissions in your device settings to start tracking.
-      </Text>
-    </View>
+      try {
+        await addDoc(collection(db, 'health_data'), {
+          user_id: user.uid,
+          data_type: sample.type,
+          value: sample.value,
+          unit: sample.unit,
+          recorded_at: sample.startDate,
+          created_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        if (__DEV__) console.warn('[HealthDataTracker] Firestore write failed:', err);
+      }
+    },
+    [user],
   );
-}
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#f0fdf4',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#86efac',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#15803d',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#166534',
-    lineHeight: 18,
-  },
-});
+  // When vitals change, persist any new samples
+  useEffect(() => {
+    if (!user || !isAuthorized || !vitals) return;
+
+    const samples: (VitalsSample | null)[] = [
+      vitals.heartRate,
+      vitals.restingHeartRate,
+      vitals.hrv,
+      vitals.respiratoryRate,
+      vitals.steps,
+    ];
+
+    for (const s of samples) {
+      if (s) persistSample(s);
+    }
+  }, [vitals, user, isAuthorized, persistSample]);
+
+  // Periodic refresh as a safety net
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !isAuthorized) return;
+
+    const interval = setInterval(refresh, SYNC_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [isAuthorized, refresh]);
+
+  return null;
+}

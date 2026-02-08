@@ -7,9 +7,9 @@ import {
   ScrollView,
   Switch,
   Platform,
-  SafeAreaView,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +37,9 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [appleWatchConsent, setAppleWatchConsent] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
-  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobDay, setDobDay] = useState('');
+  const [dobYear, setDobYear] = useState('');
   const [gender, setGender] = useState<string | null>(null);
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
@@ -122,7 +124,9 @@ export default function OnboardingScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={true}
       >
         {step === 1 && (
           <>
@@ -205,45 +209,65 @@ export default function OnboardingScreen() {
               <Text style={styles.bodyText}>
                 Please provide your date of birth. This is required for the study.
               </Text>
-              <TouchableOpacity
-                style={styles.dobButton}
-                onPress={() => setShowDobPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={dateOfBirth ? styles.dobButtonText : styles.dobButtonPlaceholder}>
-                  {dateOfBirth
-                    ? (parseLocalDate(dateOfBirth) ?? new Date()).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                    : 'Tap to select date of birth'}
-                </Text>
-              </TouchableOpacity>
-              {showDobPicker && (
-                <>
-                  <DateTimePicker
-                    value={dobDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onDobPickerChange}
-                    maximumDate={new Date()}
-                    minimumDate={
-                      new Date(new Date().setFullYear(new Date().getFullYear() - 120))
-                    }
-                    textColor="black"
-                    accentColor="black"
+              <View style={styles.dobInputRow}>
+                <View style={styles.dobField}>
+                  <Text style={styles.dobFieldLabel}>Month</Text>
+                  <TextInput
+                    style={styles.dobInput}
+                    value={dobMonth}
+                    onChangeText={(val) => {
+                      setDobMonth(val);
+                      const mm = val.padStart(2, '0');
+                      const dd = dobDay.padStart(2, '0');
+                      if (val && dobDay && dobYear && dobYear.length === 4) {
+                        setDateOfBirth(`${dobYear}-${mm}-${dd}`);
+                      }
+                    }}
+                    placeholder="MM"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    placeholderTextColor="#999"
                   />
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      style={styles.donePickerButton}
-                      onPress={() => setShowDobPicker(false)}
-                    >
-                      <Text style={styles.donePickerText}>Done</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
+                </View>
+                <View style={styles.dobField}>
+                  <Text style={styles.dobFieldLabel}>Day</Text>
+                  <TextInput
+                    style={styles.dobInput}
+                    value={dobDay}
+                    onChangeText={(val) => {
+                      setDobDay(val);
+                      const mm = dobMonth.padStart(2, '0');
+                      const dd = val.padStart(2, '0');
+                      if (dobMonth && val && dobYear && dobYear.length === 4) {
+                        setDateOfBirth(`${dobYear}-${mm}-${dd}`);
+                      }
+                    }}
+                    placeholder="DD"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={[styles.dobField, { flex: 1.5 }]}>
+                  <Text style={styles.dobFieldLabel}>Year</Text>
+                  <TextInput
+                    style={styles.dobInput}
+                    value={dobYear}
+                    onChangeText={(val) => {
+                      setDobYear(val);
+                      const mm = dobMonth.padStart(2, '0');
+                      const dd = dobDay.padStart(2, '0');
+                      if (dobMonth && dobDay && val && val.length === 4) {
+                        setDateOfBirth(`${val}-${mm}-${dd}`);
+                      }
+                    }}
+                    placeholder="YYYY"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
             </View>
 
 
@@ -349,7 +373,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 48,
+    paddingBottom: 120,
   },
   header: {
     alignItems: 'center',
@@ -431,31 +455,30 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginRight: 16,
   },
-  dobButton: {
-    marginTop: 12,
-    padding: 16,
+  dobInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  dobField: {
+    flex: 1,
+  },
+  dobFieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+  },
+  dobInput: {
+    padding: 14,
+    fontSize: 18,
+    fontWeight: '500',
     backgroundColor: '#fff',
-    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
-  },
-  dobButtonText: {
-    fontSize: 16,
+    borderRadius: 8,
     color: '#1a1a1a',
-    fontWeight: '500',
-  },
-  dobButtonPlaceholder: {
-    fontSize: 16,
-    color: '#999',
-  },
-  donePickerButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  donePickerText: {
-    fontSize: 16,
-    color: theme.primary,
-    fontWeight: '600',
+    textAlign: 'center',
   },
   fieldLabel: {
     fontSize: 14,

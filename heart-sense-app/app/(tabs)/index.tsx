@@ -29,8 +29,10 @@ import {
   PersonStanding,
   Zap,
   Wind,
+  Watch,
 } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+import { useHealthKit } from '@/hooks/useHealthKit';
 
 interface QuickStats {
   todayEntries: number;
@@ -43,9 +45,22 @@ type LatestWellbeing = {
   stressLevel: number;
 } | null;
 
+function timeAgo(isoDate: string | null): string {
+  if (!isoDate) return 'Not synced';
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { vitals, isAvailable: hkAvailable } = useHealthKit();
   const [stats, setStats] = useState<QuickStats>({
     todayEntries: 0,
     weeklyEntries: 0,
@@ -179,9 +194,17 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>Good day!</Text>
               <Text style={styles.subtitle}>How are you feeling today?</Text>
             </View>
-            <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
-              <HelpCircle color={theme.primary} size={28} />
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              {hkAvailable && (
+                <View style={styles.syncBadge}>
+                  <Watch color={theme.primary} size={16} />
+                  <Text style={styles.syncText}>{timeAgo(vitals?.lastUpdated ?? null)}</Text>
+                </View>
+              )}
+              <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
+                <HelpCircle color={theme.primary} size={28} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -326,6 +349,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  syncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  syncText: {
+    fontSize: 11,
+    color: '#666',
   },
   helpButton: {
     padding: 4,

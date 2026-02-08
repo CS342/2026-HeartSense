@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { HealthDataTracker } from '@/components/HealthDataTracker';
 
 // Show notifications even when the app is in the foreground (otherwise they often don't appear)
 Notifications.setNotificationHandler({
@@ -24,6 +25,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <OnboardingProvider>
+        <HealthDataTracker />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="auth/login" />
