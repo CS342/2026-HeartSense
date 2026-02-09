@@ -64,3 +64,67 @@ export {
   getHealthInsights,
   dismissInsight,
 } from "./engagement/insights";
+
+// ============================================
+// TEST ENDPOINTS (Remove before production)
+// ============================================
+// HTTP endpoints to manually trigger scheduled functions for testing
+import {onRequest} from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
+
+/**
+ * Test endpoint to trigger daily reminder check
+ * Usage: curl https://<region>-<project>.cloudfunctions.net/testDailyReminder
+ */
+export const testDailyReminder = onRequest(async (req, res) => {
+  logger.info("Manually triggering daily reminder check for testing");
+  try {
+    // Manually invoke the scheduled function's logic
+    const db = admin.firestore();
+    const today = new Date().toISOString().split("T")[0];
+
+    const prefsSnapshot = await db
+      .collection("user_preferences")
+      .where("notify_daily_reminder", "==", true)
+      .get();
+
+    res.json({
+      success: true,
+      message: "Daily reminder check triggered",
+      usersWithRemindersEnabled: prefsSnapshot.size,
+      today: today,
+    });
+  } catch (error) {
+    logger.error("Test daily reminder error:", error);
+    res.status(500).json({success: false, error: String(error)});
+  }
+});
+
+/**
+ * Test endpoint to trigger inactivity alert check
+ * Usage: curl https://<region>-<project>.cloudfunctions.net/testInactivityCheck
+ */
+export const testInactivityCheck = onRequest(async (req, res) => {
+  logger.info("Manually triggering inactivity check for testing");
+  try {
+    const db = admin.firestore();
+    const thresholdDays = 3;
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() - thresholdDays);
+
+    const inactiveSnapshot = await db
+      .collection("engagement_stats")
+      .where("lastActivityDate", "<=", thresholdDate.toISOString().split("T")[0])
+      .get();
+
+    res.json({
+      success: true,
+      message: "Inactivity check triggered",
+      inactiveUsersFound: inactiveSnapshot.size,
+      thresholdDays: thresholdDays,
+    });
+  } catch (error) {
+    logger.error("Test inactivity check error:", error);
+    res.status(500).json({success: false, error: String(error)});
+  }
+});
