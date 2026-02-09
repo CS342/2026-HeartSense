@@ -71,28 +71,47 @@ export {
 // HTTP endpoints to manually trigger scheduled functions for testing
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import {Timestamp} from "firebase-admin/firestore";
 
 /**
- * Test endpoint to trigger daily reminder check
- * Usage: curl https://<region>-<project>.cloudfunctions.net/testDailyReminder
+ * Test endpoint to trigger daily reminder notification
+ * Usage: curl "http://localhost:5001/PROJECT/us-central1/testDailyReminder?userId=USER_ID"
  */
 export const testDailyReminder = onRequest(async (req, res) => {
-  logger.info("Manually triggering daily reminder check for testing");
+  logger.info("Manually triggering daily reminder for testing");
   try {
-    // Manually invoke the scheduled function's logic
     const db = admin.firestore();
-    const today = new Date().toISOString().split("T")[0];
+    const userId = req.query.userId as string;
 
-    const prefsSnapshot = await db
-      .collection("user_preferences")
-      .where("notify_daily_reminder", "==", true)
-      .get();
+    if (!userId) {
+      res.status(400).json({success: false, error: "userId query param required"});
+      return;
+    }
+
+    // Create a test daily reminder alert
+    const now = Timestamp.now();
+    const expiresAt = Timestamp.fromDate(
+      new Date(Date.now() + 24 * 60 * 60 * 1000)
+    );
+
+    const alertRef = await db.collection("engagement_alerts").add({
+      userId,
+      alertType: "inactivity_warning",
+      title: "Daily Health Check-in",
+      message: "Take a moment to log how you're feeling today. Regular tracking helps you and your healthcare team spot patterns.",
+      priority: "low",
+      isRead: false,
+      isDismissed: false,
+      createdAt: now,
+      expiresAt,
+      metadata: {type: "daily_reminder", test: true},
+    });
 
     res.json({
       success: true,
-      message: "Daily reminder check triggered",
-      usersWithRemindersEnabled: prefsSnapshot.size,
-      today: today,
+      message: "Daily reminder alert created",
+      alertId: alertRef.id,
+      userId,
     });
   } catch (error) {
     logger.error("Test daily reminder error:", error);
@@ -101,27 +120,44 @@ export const testDailyReminder = onRequest(async (req, res) => {
 });
 
 /**
- * Test endpoint to trigger inactivity alert check
- * Usage: curl https://<region>-<project>.cloudfunctions.net/testInactivityCheck
+ * Test endpoint to trigger inactivity alert notification
+ * Usage: curl "http://localhost:5001/PROJECT/us-central1/testInactivityCheck?userId=USER_ID"
  */
 export const testInactivityCheck = onRequest(async (req, res) => {
   logger.info("Manually triggering inactivity check for testing");
   try {
     const db = admin.firestore();
-    const thresholdDays = 3;
-    const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - thresholdDays);
+    const userId = req.query.userId as string;
 
-    const inactiveSnapshot = await db
-      .collection("engagement_stats")
-      .where("lastActivityDate", "<=", thresholdDate.toISOString().split("T")[0])
-      .get();
+    if (!userId) {
+      res.status(400).json({success: false, error: "userId query param required"});
+      return;
+    }
+
+    // Create a test inactivity alert
+    const now = Timestamp.now();
+    const expiresAt = Timestamp.fromDate(
+      new Date(Date.now() + 48 * 60 * 60 * 1000)
+    );
+
+    const alertRef = await db.collection("engagement_alerts").add({
+      userId,
+      alertType: "inactivity_warning",
+      title: "We Miss You!",
+      message: "It's been a few days since your last health log. Even a quick check-in helps track your health journey.",
+      priority: "medium",
+      isRead: false,
+      isDismissed: false,
+      createdAt: now,
+      expiresAt,
+      metadata: {daysInactive: 3, test: true},
+    });
 
     res.json({
       success: true,
-      message: "Inactivity check triggered",
-      inactiveUsersFound: inactiveSnapshot.size,
-      thresholdDays: thresholdDays,
+      message: "Inactivity alert created",
+      alertId: alertRef.id,
+      userId,
     });
   } catch (error) {
     logger.error("Test inactivity check error:", error);
