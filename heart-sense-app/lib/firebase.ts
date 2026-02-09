@@ -25,8 +25,9 @@ const USE_EMULATOR = process.env.EXPO_PUBLIC_USE_EMULATOR === "true";
 
 if (USE_EMULATOR) {
   console.log("Connecting to Firebase Emulators...");
-  connectFirestoreEmulator(db, "localhost", 8080);
-  connectAuthEmulator(auth, "http://localhost:9099");
-  connectFunctionsEmulator(functions, "localhost", 5001);
+  // Use 127.0.0.1 for iOS simulator compatibility
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 }
 
