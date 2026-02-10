@@ -18,6 +18,8 @@ import {
   getSymptoms,
   getActivities,
   getWellbeingRatings,
+  getTodayWellbeingRatings,
+  calculateWellbeingAverage,
 } from '@/lib/symptomService';
 import {
   Heart,
@@ -96,19 +98,15 @@ export default function HomeScreen() {
         countActivitiesSince(user.uid, weekAgo),
         countWellbeingRatingsSince(user.uid, weekAgo),
         countMedicalChangesSince(user.uid, weekAgo),
-        getWellbeingRatings(user.uid, 1),
+        getTodayWellbeingRatings(user.uid),
       ]);
 
-      const rating = wellbeingRes.data?.[0];
-      setLatestWellbeing(
-        rating
-          ? {
-            energyLevel: rating.energyLevel,
-            moodRating: rating.moodRating,
-            stressLevel: rating.stressLevel,
-          }
-          : null
-      );
+      if (wellbeingRes.data && wellbeingRes.data.length > 0) {
+        const averaged = calculateWellbeingAverage(wellbeingRes.data);
+        setLatestWellbeing(averaged);
+      } else {
+        setLatestWellbeing(null);
+      }
 
       const todayTotal =
         todaySymptomsRes.count +
@@ -213,21 +211,21 @@ export default function HomeScreen() {
                     <Zap color={theme.primary} size={20} />
                     <Text style={styles.label}>Energy</Text>
                   </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.energyLevel}</Text>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.energyLevel.toFixed(1)}</Text>
                 </View>
                 <View style={styles.wellbeingRow}>
                   <View style={styles.labelRow}>
                     <Wind color={theme.primary} size={20} />
                     <Text style={styles.label}>Stress</Text>
                   </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.stressLevel}</Text>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.stressLevel.toFixed(1)}</Text>
                 </View>
                 <View style={styles.wellbeingRow}>
                   <View style={styles.labelRow}>
                     <PersonStanding color={theme.primary} size={20} />
                     <Text style={styles.label}>Mood</Text>
                   </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.moodRating}</Text>
+                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.moodRating.toFixed(1)}</Text>
                 </View>
 
               </>
