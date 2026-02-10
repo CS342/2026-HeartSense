@@ -69,3 +69,66 @@ export interface LatestVitals {
   /** When the most recent sample (of any type) was recorded. */
   lastUpdated: string | null;
 }
+
+// ── Workout models ──────────────────────────────────────────────────
+
+/**
+ * Mapping from WorkoutActivityType enum values to human-readable names.
+ * Only the activity types relevant to a cardiac health study are included.
+ */
+export const WORKOUT_ACTIVITY_NAMES: Record<number, string> = {
+  1: 'American Football',
+  6: 'Basketball',
+  8: 'Boxing',
+  9: 'Climbing',
+  11: 'Cross Training',
+  13: 'Cycling',
+  14: 'Dance',
+  16: 'Elliptical',
+  20: 'Strength Training',
+  21: 'Golf',
+  24: 'Hiking',
+  29: 'Mind & Body',
+  35: 'Rowing',
+  37: 'Running',
+  41: 'Soccer',
+  44: 'Stair Climbing',
+  46: 'Swimming',
+  48: 'Tennis',
+  50: 'Traditional Strength Training',
+  52: 'Walking',
+  57: 'Yoga',
+  58: 'Barre',
+  59: 'Core Training',
+  62: 'Flexibility',
+  63: 'HIIT',
+  64: 'Jump Rope',
+  66: 'Pilates',
+  72: 'Tai Chi',
+  73: 'Mixed Cardio',
+  79: 'Pickleball',
+  80: 'Cooldown',
+  3000: 'Other',
+};
+
+/** A normalised workout record from HealthKit. */
+export interface WorkoutRecord {
+  /** HealthKit UUID — used for de-duplication. */
+  uuid: string;
+  /** Human-readable activity name (e.g. "Running"). */
+  activityType: string;
+  /** Raw WorkoutActivityType enum value. */
+  activityTypeRaw: number;
+  /** Duration in minutes. */
+  durationMinutes: number;
+  /** Total energy burned in kcal, if available. */
+  caloriesBurned: number | null;
+  /** Total distance in km, if available. */
+  distanceKm: number | null;
+  /** ISO-8601 start timestamp. */
+  startDate: string;
+  /** ISO-8601 end timestamp. */
+  endDate: string;
+  /** Whether this was an indoor workout. */
+  indoor: boolean;
+}

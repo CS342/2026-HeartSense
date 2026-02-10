@@ -11,6 +11,8 @@ import {
   getMostRecentQuantitySample,
   queryQuantitySamples,
   queryStatisticsForQuantity,
+  queryWorkoutSamples,
+  getMostRecentWorkout,
 } from '@kingstinct/react-native-healthkit';
 import {
   HK_IDENTIFIERS,
@@ -19,8 +21,9 @@ import {
   type LatestVitals,
   type VitalsSample,
   type DailyActivity,
+  type WorkoutRecord,
 } from './types';
-import { toVitalsSample, toCalendarDate } from './mappers';
+import { toVitalsSample, toCalendarDate, toWorkoutRecord } from './mappers';
 
 // ── Availability ────────────────────────────────────────────────────
 
@@ -35,11 +38,14 @@ export function checkAvailability(): boolean {
 
 // ── Authorization ───────────────────────────────────────────────────
 
+/** Identifier needed to read workouts from HealthKit. */
+const WORKOUT_TYPE_IDENTIFIER = 'HKWorkoutTypeIdentifier';
+
 export async function requestHealthPermissions(): Promise<boolean> {
   if (!checkAvailability()) return false;
   try {
     await requestAuthorization({
-      toRead: READ_IDENTIFIERS as any,
+      toRead: [...READ_IDENTIFIERS, WORKOUT_TYPE_IDENTIFIER] as any,
       toShare: WRITE_IDENTIFIERS as any,
     });
     return true;
@@ -145,5 +151,65 @@ export async function getDailyActivity(
       .sort((a, b) => a.date.localeCompare(b.date));
   } catch {
     return [];
+  }
+}
+
+// ── Workouts ─────────────────────────────────────────────────────────
+
+/**
+ * Query recent workouts from HealthKit.
+ * Returns up to `limit` workouts, most-recent first.
+ */
+export async function getRecentWorkouts(limit = 20): Promise<WorkoutRecord[]> {
+  if (!checkAvailability()) return [];
+
+  try {
+    const proxies = await queryWorkoutSamples({
+      limit,
+      ascending: false,
+    });
+
+    if (!Array.isArray(proxies)) return [];
+
+    const results: WorkoutRecord[] = [];
+    for (const proxy of proxies) {
+      try {
+        // Fetch per-workout statistics (calories, distance)
+        const stats = await (proxy as any).getAllStatistics();
+        results.push(toWorkoutRecord(proxy as any, stats));
+      } catch {
+        // If stats fail, still record the workout without them
+        results.push(toWorkoutRecord(proxy as any));
+      }
+    }
+
+    return results;
+  } catch (err) {
+    if (__DEV__) console.warn('[HealthKit] queryWorkoutSamples failed:', err);
+    return [];
+  }
+}
+
+/**
+ * Get the single most-recent workout.
+ */
+export async function getLatestWorkout(): Promise<WorkoutRecord | null> {
+  if (!checkAvailability()) return null;
+
+  try {
+    const proxy = await getMostRecentWorkout();
+    if (!proxy) return null;
+
+    let stats: Record<string, any> | undefined;
+    try {
+      stats = await (proxy as any).getAllStatistics();
+    } catch {
+      // stats unavailable — continue without
+    }
+
+    return toWorkoutRecord(proxy as any, stats);
+  } catch (err) {
+    if (__DEV__) console.warn('[HealthKit] getMostRecentWorkout failed:', err);
+    return null;
   }
 }

@@ -4,6 +4,8 @@ export {
   getLatestVitals,
   getVitals,
   getDailyActivity,
+  getRecentWorkouts,
+  getLatestWorkout,
 } from './HealthKitClient';
 
 export type {
@@ -12,6 +14,7 @@ export type {
   DailyVitals,
   LatestVitals,
   HKIdentifierKey,
+  WorkoutRecord,
 } from './types';
 
-export { HK_IDENTIFIERS, READ_IDENTIFIERS } from './types';
+export { HK_IDENTIFIERS, READ_IDENTIFIERS, WORKOUT_ACTIVITY_NAMES } from './types';
