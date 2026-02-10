@@ -300,6 +300,61 @@ export const getWellbeingRatings = async (userId: string, limitCount: number = 5
   }
 };
 
+export const getTodayWellbeingRatings = async (userId: string) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      where('recorded_at', '>=', Timestamp.fromDate(today)),
+      orderBy('recorded_at', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        notes: data.notes ?? '',
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at ? data.recorded_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: ratings, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const calculateWellbeingAverage = (ratings: WellbeingRating[]) => {
+  if (ratings.length === 0) {
+    return null;
+  }
+
+  const sum = ratings.reduce(
+    (acc, rating) => ({
+      energyLevel: acc.energyLevel + rating.energyLevel,
+      moodRating: acc.moodRating + rating.moodRating,
+      stressLevel: acc.stressLevel + rating.stressLevel,
+    }),
+    { energyLevel: 0, moodRating: 0, stressLevel: 0 }
+  );
+
+  const count = ratings.length;
+
+  return {
+    energyLevel: Math.round((sum.energyLevel / count) * 10) / 10,
+    moodRating: Math.round((sum.moodRating / count) * 10) / 10,
+    stressLevel: Math.round((sum.stressLevel / count) * 10) / 10,
+  };
+};
+
 export const logWellbeingRating = async (data: WellbeingRating) => {
   try {
     const docRef = await addDoc(collection(db, 'well_being_ratings'), {
