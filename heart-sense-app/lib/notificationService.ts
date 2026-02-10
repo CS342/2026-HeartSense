@@ -67,6 +67,13 @@ export async function showLocalNotification(
   body: string,
   data?: Record<string, unknown>
 ): Promise<string> {
+  // Request permissions first
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') {
+    console.log('Notification permissions not granted');
+    return '';
+  }
+
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: {
       title,
@@ -74,7 +81,10 @@ export async function showLocalNotification(
       data,
       sound: true,
     },
-    trigger: null, // null means show immediately
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 1, // Show after 1 second (works better on simulator)
+    },
   });
 
   return notificationId;
