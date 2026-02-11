@@ -14,6 +14,11 @@ export default function RootLayout() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/signup" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="screens/symptom-entry" />
+        <Stack.Screen name="screens/wellbeing-rating" />
+        <Stack.Screen name="screens/activity-entry" />
+        <Stack.Screen name="screens/medical-condition" />
+        <Stack.Screen name="screens/help" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
