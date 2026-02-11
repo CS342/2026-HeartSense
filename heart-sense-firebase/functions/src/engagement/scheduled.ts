@@ -11,8 +11,6 @@ import {
   getInactiveUsers,
   createEngagementAlert,
   getUserNotificationPreferences,
-  recalculateWeeklyCount,
-  recalculateMonthlyCount,
   getTodayDateString,
 } from "../utils/engagementUtils";
 import {DEFAULT_ENGAGEMENT_CONFIG, UserEngagementStats} from "../types/engagement";
@@ -164,85 +162,6 @@ export const inactivityAlertCheck = onSchedule(
       logger.info(`Inactivity check complete. Created ${alertsCreated} alerts.`);
     } catch (error) {
       logger.error(`Error in inactivity alert check: ${error}`);
-    }
-  }
-);
-
-/**
- * Scheduled: Weekly Summary (runs every Monday at 10 AM)
- * Generates and sends weekly engagement summaries
- */
-export const weeklySummaryGeneration = onSchedule(
-  {
-    schedule: "0 10 * * 1", // Every Monday at 10 AM
-    timeZone: "America/Los_Angeles",
-  },
-  async () => {
-    logger.info("Running weekly summary generation");
-
-    try {
-      // Get all users with engagement stats
-      const statsSnapshot = await db
-        .collection("engagement_stats")
-        .get();
-
-      let summariesCreated = 0;
-
-      for (const statsDoc of statsSnapshot.docs) {
-        const stats = statsDoc.data() as UserEngagementStats;
-        const userId = stats.userId;
-
-        // Check user preferences
-        const prefs = await getUserNotificationPreferences(userId);
-        if (prefs?.notify_health_insights === false) {
-          continue;
-        }
-
-        // Get weekly data
-        const weeklyCount = await recalculateWeeklyCount(userId);
-        const previousWeekCount = stats.weeklyEntryCount || 0;
-
-        // Generate summary message
-        let message = `Last week you logged ${weeklyCount} entries. `;
-
-        if (weeklyCount > previousWeekCount) {
-          message += "That's more than the week before - great progress!";
-        } else if (weeklyCount === previousWeekCount && weeklyCount > 0) {
-          message += "You maintained your pace from the previous week.";
-        } else if (weeklyCount > 0) {
-          message += "Keep it up and try to log a bit more this week!";
-        } else {
-          message = "You didn't log any entries last week. " +
-            "Even brief check-ins help track your health!";
-        }
-
-        // Create weekly summary alert
-        await createEngagementAlert(
-          userId,
-          "weekly_summary",
-          "Your Weekly Health Summary",
-          message,
-          "low",
-          {
-            weeklyCount,
-            previousWeekCount,
-          },
-          168 // Expires in 1 week
-        );
-
-        // Update stats with recalculated counts
-        await db.collection("engagement_stats").doc(userId).update({
-          weeklyEntryCount: weeklyCount,
-          monthlyEntryCount: await recalculateMonthlyCount(userId),
-          updatedAt: Timestamp.now(),
-        });
-
-        summariesCreated++;
-      }
-
-      logger.info(`Weekly summary complete. Created ${summariesCreated} summaries.`);
-    } catch (error) {
-      logger.error(`Error in weekly summary generation: ${error}`);
     }
   }
 );

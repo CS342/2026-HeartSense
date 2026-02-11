@@ -34,7 +34,6 @@ export {
 export {
   dailyReminderCheck,
   inactivityAlertCheck,
-  weeklySummaryGeneration,
   cleanupExpiredAlerts,
   monthlyStatsReset,
   healthSyncCheck,
