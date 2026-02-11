@@ -20,6 +20,22 @@ export interface Activity {
   createdAt: Date;
 }
 
+export interface MedicalConditionChange {
+  userId: string;
+  conditionType: string;
+  description: string;
+  occurredAt: Date;
+}
+
+export interface WellbeingRating {
+  userId: string;
+  energyLevel: number; // 1-5
+  moodRating: number; // 1-5
+  notes: string;
+  stressLevel: number; // 1-5
+  recordedAt: Date;
+}
+
 export const logSymptom = async (symptomData: Omit<Symptom, 'createdAt'>) => {
   try {
     const docRef = await addDoc(collection(db, 'symptoms'), {
@@ -157,5 +173,200 @@ export const countActivitiesSince = async (userId: string, since: Date) => {
     return { count: querySnapshot.size, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
+  }
+};
+
+export const countWellbeingRatings = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countWellbeingRatingsSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      where('recorded_at', '>=', Timestamp.fromDate(since))
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countMedicalChanges = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const countMedicalChangesSince = async (userId: string, since: Date) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId),
+      where('occurred_at', '>=', Timestamp.fromDate(since))
+    );
+    const snapshot = await getDocs(q);
+    return { count: snapshot.size, error: null };
+  } catch (error: any) {
+    return { count: 0, error: error.message };
+  }
+};
+
+export const getMedicalChanges = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'medical_conditions'),
+      where('user_id', '==', userId),
+      orderBy('occurred_at', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const changes = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        conditionType: data.condition_type,
+        description: data.description,
+        occurredAt: data.occurred_at ? data.occurred_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: changes, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const logMedicalChange = async (data: MedicalConditionChange) => {
+  try {
+    const docRef = await addDoc(collection(db, 'medical_conditions'), {
+      user_id: data.userId,
+      condition_type: data.conditionType,
+      description: data.description,
+      occurred_at: Timestamp.fromDate(data.occurredAt),
+    });
+    return { id: docRef.id, error: null };
+  } catch (error: any) {
+    return { id: null, error: error.message || 'Failed to log medical change' };
+  }
+};
+
+export const getWellbeingRatings = async (userId: string, limitCount: number = 50) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      orderBy('recorded_at', 'desc'),
+      limit(limitCount)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        notes: data.notes ?? '',
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at ? data.recorded_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: ratings, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const getTodayWellbeingRatings = async (userId: string) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      where('recorded_at', '>=', Timestamp.fromDate(today)),
+      orderBy('recorded_at', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        notes: data.notes ?? '',
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at ? data.recorded_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: ratings, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const calculateWellbeingAverage = (ratings: WellbeingRating[]) => {
+  if (ratings.length === 0) {
+    return null;
+  }
+
+  const sum = ratings.reduce(
+    (acc, rating) => ({
+      energyLevel: acc.energyLevel + rating.energyLevel,
+      moodRating: acc.moodRating + rating.moodRating,
+      stressLevel: acc.stressLevel + rating.stressLevel,
+    }),
+    { energyLevel: 0, moodRating: 0, stressLevel: 0 }
+  );
+
+  const count = ratings.length;
+
+  return {
+    energyLevel: Math.round((sum.energyLevel / count) * 10) / 10,
+    moodRating: Math.round((sum.moodRating / count) * 10) / 10,
+    stressLevel: Math.round((sum.stressLevel / count) * 10) / 10,
+  };
+};
+
+export const logWellbeingRating = async (data: WellbeingRating) => {
+  try {
+    const docRef = await addDoc(collection(db, 'well_being_ratings'), {
+      user_id: data.userId,
+      energy_level: data.energyLevel,
+      mood_rating: data.moodRating,
+      notes: data.notes || '',
+      stress_level: data.stressLevel,
+      recorded_at: Timestamp.fromDate(data.recordedAt),
+    });
+    return { id: docRef.id, error: null };
+  } catch (error: any) {
+    return { id: null, error: error.message || 'Failed to log well-being rating' };
   }
 };

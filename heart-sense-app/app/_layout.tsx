@@ -2,10 +2,22 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { NotificationBanner } from '@/components/NotificationBanner';
-import * as Notifications from 'expo-notifications';
+
+// Show notifications even when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -28,23 +40,26 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth/login" />
-          <Stack.Screen name="auth/signup" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <NotificationBanner
-          title={notification.title}
-          message={notification.message}
-          visible={notification.visible}
-          onDismiss={() => setNotification(prev => ({ ...prev, visible: false }))}
-          type="info"
-        />
-        <StatusBar style="auto" />
-      </View>
+      <OnboardingProvider>
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/signup" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <NotificationBanner
+            title={notification.title}
+            message={notification.message}
+            visible={notification.visible}
+            onDismiss={() => setNotification(prev => ({ ...prev, visible: false }))}
+            type="info"
+          />
+          <StatusBar style="auto" />
+        </View>
+      </OnboardingProvider>
     </AuthProvider>
   );
 }

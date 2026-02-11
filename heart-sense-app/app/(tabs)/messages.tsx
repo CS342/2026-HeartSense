@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { MessageSquare, X, Mail, MailOpen } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface Message {
   id: string;
@@ -30,6 +31,7 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -49,7 +51,8 @@ export default function MessagesScreen() {
       const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
       setMessages(rows as Message[]);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.log('Error loading messages:', error);
+      setError('Error loading messages');
     } finally {
       setLoading(false);
     }
@@ -96,7 +99,23 @@ export default function MessagesScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>MyHealth Messages coming soon!</Text>
+          <Text style={styles.errorText}>
+            Messages from your healthcare providers will appear here
+          </Text>
+          <Text style={styles.errorText}>
+            Please check back later.
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -112,7 +131,7 @@ export default function MessagesScreen() {
           )}
         </View>
         <View style={styles.headerIcon}>
-          <MessageSquare color="#0066cc" size={28} />
+          <MessageSquare color={theme.primary} size={28} />
         </View>
       </View>
 
@@ -140,7 +159,7 @@ export default function MessagesScreen() {
                   {message.read ? (
                     <MailOpen color="#999" size={24} />
                   ) : (
-                    <Mail color="#0066cc" size={24} />
+                    <Mail color={theme.primary} size={24} />
                   )}
                 </View>
                 <View style={styles.messageContent}>
@@ -232,7 +251,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#e6f2ff',
+    backgroundColor: theme.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -244,7 +263,7 @@ const styles = StyleSheet.create({
   },
   unreadCount: {
     fontSize: 14,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
   scrollView: {
@@ -284,7 +303,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e5e5',
   },
   messageCardUnread: {
-    borderColor: '#0066cc',
+    borderColor: theme.primary,
     borderLeftWidth: 4,
   },
   messageIcon: {
@@ -308,7 +327,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     marginLeft: 8,
   },
   messageSubject: {
@@ -385,7 +404,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   infoBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,
@@ -394,5 +413,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1e40af',
     lineHeight: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: theme.primary,
+    marginBottom: 8,
   },
 });

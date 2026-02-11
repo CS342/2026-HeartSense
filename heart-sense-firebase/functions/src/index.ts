@@ -66,6 +66,12 @@ export {
 } from "./engagement/insights";
 
 // ============================================
+// Push Notification Functions
+// ============================================
+// Sends push notifications via FCM or Expo Push API
+export {sendPushNotification} from "./notifications/push";
+
+// ============================================
 // TEST ENDPOINTS (Remove before production)
 // ============================================
 // HTTP endpoints to manually trigger scheduled functions for testing

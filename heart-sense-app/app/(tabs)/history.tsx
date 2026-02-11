@@ -10,8 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSymptoms, getActivities } from '@/lib/symptomService';
+import { getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges } from '@/lib/symptomService';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface TimelineEntry {
   id: string;
@@ -42,13 +43,18 @@ export default function HistoryScreen() {
 
     try {
       console.log('Fetching symptoms and activities for user:', user.uid);
-      const [symptomsRes, activitiesRes] = await Promise.all([
+      const [symptomsRes, activitiesRes, wellbeingRes, medicalChangesRes] = await Promise.all([
         getSymptoms(user.uid, 50),
         getActivities(user.uid, 50),
+        getWellbeingRatings(user.uid, 50),
+        getMedicalChanges(user.uid, 50),
       ]);
 
       console.log('Symptoms response:', symptomsRes);
       console.log('Activities response:', activitiesRes);
+      console.log('Wellbeing response:', wellbeingRes);
+      console.log('Medical changes response:', medicalChangesRes);
+
 
       const timeline: TimelineEntry[] = [];
 
@@ -62,7 +68,7 @@ export default function HistoryScreen() {
             id: s.id,
             type: 'symptom',
             title: s.symptomType,
-            description: s.description || `Severity: ${s.severity}/10`,
+            description: s.description || `Severity: ${s.severity}/5`,
             timestamp: s.occurredAt,
             details: s,
           });
@@ -87,6 +93,33 @@ export default function HistoryScreen() {
           });
         });
       }
+      if (wellbeingRes.data && Array.isArray(wellbeingRes.data)) {
+        wellbeingRes.data.forEach((w: any) => {
+          console.log('Processing wellbeing:', w);
+          timeline.push({
+            id: w.id,
+            type: 'wellbeing',
+            title: `Energy: ${w.energyLevel} - Mood: ${w.moodRating} - Stress: ${w.stressLevel}`,
+            description: w.notes,
+            timestamp: w.recordedAt,
+            details: w,
+          });
+        });
+      }
+
+      if (medicalChangesRes.data && Array.isArray(medicalChangesRes.data)) {
+        medicalChangesRes.data.forEach((m: any) => {
+          console.log('Processing medical change:', m);
+          timeline.push({
+            id: m.id,
+            type: 'medical',
+            title: m.conditionType,
+            description: m.description,
+            timestamp: m.occurredAt,
+            details: m,
+          });
+        });
+      }
 
       timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -104,7 +137,7 @@ export default function HistoryScreen() {
       case 'symptom':
         return <Heart color="#dc2626" size={20} />;
       case 'wellbeing':
-        return <TrendingUp color="#0066cc" size={20} />;
+        return <TrendingUp color={theme.primary} size={20} />;
       case 'activity':
         return <Activity color="#16a34a" size={20} />;
       case 'medical':
@@ -150,7 +183,7 @@ export default function HistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );

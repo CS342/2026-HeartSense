@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,50 +8,106 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { ArrowLeft, Smile, Frown, Meh } from 'lucide-react-native';
+import { logWellbeingRating } from '@/lib/symptomService';
+import { ArrowLeft, Zap, Wind, PersonStanding } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
-const RATINGS = [
-  { value: 1, label: 'Very Poor', emoji: '😢' },
-  { value: 2, label: 'Poor', emoji: '😟' },
-  { value: 3, label: 'Fair', emoji: '😕' },
-  { value: 4, label: 'Below Average', emoji: '🙁' },
-  { value: 5, label: 'Average', emoji: '😐' },
-  { value: 6, label: 'Above Average', emoji: '🙂' },
-  { value: 7, label: 'Good', emoji: '😊' },
-  { value: 8, label: 'Very Good', emoji: '😄' },
-  { value: 9, label: 'Excellent', emoji: '😃' },
-  { value: 10, label: 'Outstanding', emoji: '🤩' },
+const ENERGY_LEVELS = [
+  { value: 1, label: 'Very low', description: 'Barely able to get through the day' },
+  { value: 2, label: 'Low', description: 'Tired, need more rest' },
+  { value: 3, label: 'Moderate', description: 'Getting by, average energy' },
+  { value: 4, label: 'Good', description: 'Feeling energized and alert' },
+  { value: 5, label: 'Very high', description: 'Full of energy, ready for anything' },
+];
+
+const STRESS_LEVELS = [
+  { value: 1, label: 'Very low', description: 'Completely relaxed and calm' },
+  { value: 2, label: 'Low', description: 'Mostly at ease' },
+  { value: 3, label: 'Moderate', description: 'Some tension, manageable' },
+  { value: 4, label: 'High', description: 'Quite stressed, hard to unwind' },
+  { value: 5, label: 'Very high', description: 'Overwhelmed, very tense' },
+];
+
+const MOOD_RATINGS = [
+  { value: 1, label: 'Very poor', description: 'Down, struggling with low spirits' },
+  { value: 2, label: 'Poor', description: 'Not great, feeling low' },
+  { value: 3, label: 'Fair', description: 'Okay overall, neither up nor down' },
+  { value: 4, label: 'Good', description: 'In a positive frame of mind' },
+  { value: 5, label: 'Very good', description: 'In great spirits, feeling upbeat' },
 ];
 
 export default function WellbeingRating() {
   const { user } = useAuth();
   const router = useRouter();
-  const [rating, setRating] = useState(5);
+  const [energyLevel, setEnergyLevel] = useState(3);
+  const [stressLevel, setStressLevel] = useState(3);
+  const [moodRating, setMoodRating] = useState(3);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const notesSectionRef = useRef<View>(null);
+  const notesFocusedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const HEADER_APPROX = 100;
+  const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kbHeight = e.endCoordinates.height;
+      setKeyboardHeight(kbHeight);
+      if (!notesFocusedRef.current || !notesSectionRef.current || !scrollRef.current) return;
+      const windowHeight = Dimensions.get('window').height;
+      const maxVisibleY = windowHeight - kbHeight - HEADER_APPROX - PAD_ABOVE_KEYBOARD;
+      timeoutId = setTimeout(() => {
+        notesSectionRef.current?.measureInWindow((_x, y, _w, h) => {
+          const sectionBottom = y + h;
+          const scrollDelta = sectionBottom - maxVisibleY;
+          if (scrollDelta > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + scrollDelta,
+              animated: true,
+            });
+          }
+        });
+      }, Platform.OS === 'ios' ? 200 : 400);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      clearTimeout(timeoutId);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSubmit = async () => {
+    const uid = user?.uid;
+    if (!uid) {
+      Alert.alert('Error', 'You must be signed in to save a rating');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-
-      // Use a compound key of userId_date to emulate upsert on (user_id, rating_date)
-      const uid = user?.uid;
-      if (!uid) throw new Error('Not authenticated');
-
-      await setDoc(doc(db, 'well_being_ratings', `${uid}_${today}`), {
-        user_id: uid,
-        rating,
+      const { error } = await logWellbeingRating({
+        userId: uid,
+        energyLevel,
+        moodRating,
         notes,
-        rating_date: today,
-        updated_at: new Date().toISOString(),
-      }, { merge: true });
+        stressLevel,
+        recordedAt: new Date(),
+      });
+
+      if (error) throw new Error(error);
 
       Alert.alert('Success', 'Well-being rating saved successfully');
       router.back();
@@ -62,41 +118,54 @@ export default function WellbeingRating() {
     }
   };
 
-  const selectedRating = RATINGS.find((r) => r.value === rating);
+  const selectedEnergy = ENERGY_LEVELS.find((e) => e.value === energyLevel);
+  const selectedStress = STRESS_LEVELS.find((s) => s.value === stressLevel);
+  const selectedMood = MOOD_RATINGS.find((m) => m.value === moodRating);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#1a1a1a" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Well-being Rating</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.ratingDisplay}>
-          <Text style={styles.emoji}>{selectedRating?.emoji}</Text>
-          <Text style={styles.ratingValue}>{rating}/10</Text>
-          <Text style={styles.ratingLabel}>{selectedRating?.label}</Text>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#1a1a1a" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Well-being Rating</Text>
+          <View style={{ width: 24 }} />
         </View>
 
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(ev: { nativeEvent: { contentOffset: { y: number } } }) => { scrollYRef.current = ev.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
+        >
         <View style={styles.section}>
-          <Text style={styles.label}>How do you feel today?</Text>
-          <View style={styles.ratingScale}>
-            {RATINGS.map((item) => (
+          <View style={styles.labelRow}>
+            <Zap color={theme.primary} size={20} />
+            <Text style={styles.label}>Energy level (1–5)</Text>
+          </View>
+          <Text style={styles.description}>{selectedEnergy?.description}</Text>
+          <View style={styles.scaleRow}>
+            {ENERGY_LEVELS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
-                  styles.ratingButton,
-                  rating === item.value && styles.ratingButtonSelected,
+                  styles.scaleButton,
+                  energyLevel === item.value && styles.scaleButtonSelected,
                 ]}
-                onPress={() => setRating(item.value)}
+                onPress={() => setEnergyLevel(item.value)}
               >
                 <Text
                   style={[
-                    styles.ratingButtonText,
-                    rating === item.value && styles.ratingButtonTextSelected,
+                    styles.scaleButtonText,
+                    energyLevel === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
                   {item.value}
@@ -104,10 +173,71 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
+          <Text style={styles.scaleLabel}>{selectedEnergy?.label}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Notes (Optional)</Text>
+          <View style={styles.labelRow}>
+            <Wind color={theme.primary} size={20} />
+            <Text style={styles.label}>Stress level (1–5)</Text>
+          </View>
+          <Text style={styles.description}>{selectedStress?.description}</Text>
+          <View style={styles.scaleRow}>
+            {STRESS_LEVELS.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.scaleButton,
+                  stressLevel === item.value && styles.scaleButtonSelected,
+                ]}
+                onPress={() => setStressLevel(item.value)}
+              >
+                <Text
+                  style={[
+                    styles.scaleButtonText,
+                    stressLevel === item.value && styles.scaleButtonTextSelected,
+                  ]}
+                >
+                  {item.value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.scaleLabel}>{selectedStress?.label}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.labelRow}>
+            <PersonStanding color={theme.primary} size={20} />
+            <Text style={styles.label}>Mood (1–5)</Text>
+          </View>
+          <Text style={styles.description}>{selectedMood?.description}</Text>
+          <View style={styles.scaleRow}>
+            {MOOD_RATINGS.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.scaleButton,
+                  moodRating === item.value && styles.scaleButtonSelected,
+                ]}
+                onPress={() => setMoodRating(item.value)}
+              >
+                <Text
+                  style={[
+                    styles.scaleButtonText,
+                    moodRating === item.value && styles.scaleButtonTextSelected,
+                  ]}
+                >
+                  {item.value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.scaleLabel}>{selectedMood?.label}</Text>
+        </View>
+
+        <View ref={notesSectionRef} style={styles.section} collapsable={false}>
+          <Text style={styles.label}>Notes (optional)</Text>
           <TextInput
             style={styles.textArea}
             value={notes}
@@ -116,6 +246,8 @@ export default function WellbeingRating() {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            onFocus={() => { notesFocusedRef.current = true; }}
+            onBlur={() => { notesFocusedRef.current = false; }}
           />
         </View>
 
@@ -128,7 +260,8 @@ export default function WellbeingRating() {
             {loading ? 'Saving...' : 'Save Rating'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -158,60 +291,61 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  ratingDisplay: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  emoji: {
-    fontSize: 72,
-    marginBottom: 16,
-  },
-  ratingValue: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#0066cc',
-    marginBottom: 8,
-  },
-  ratingLabel: {
-    fontSize: 20,
-    color: '#666',
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 28,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  description: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 12,
   },
-  ratingScale: {
+  scaleRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  ratingButton: {
-    width: 60,
-    height: 40,
-    borderRadius: 20,
+  scaleButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  ratingButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+  scaleButtonSelected: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
-  ratingButtonText: {
-    fontSize: 16,
+  scaleButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#666',
   },
-  ratingButtonTextSelected: {
+  scaleButtonTextSelected: {
     color: '#fff',
-    fontWeight: '600',
+  },
+  scaleLabel: {
+    fontSize: 13,
+    color: theme.primary,
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
   },
   textArea: {
     borderWidth: 1,
@@ -221,9 +355,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
     minHeight: 120,
+    marginTop: 4,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',

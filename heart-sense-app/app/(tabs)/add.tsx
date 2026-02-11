@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 export default function AddScreen() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,20 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { theme } from '@/theme/colors';
 
 const SYMPTOM_TYPES = [
   'Dizziness',
+  'Fainting',
   'Chest Pain',
   'Racing Heart',
   'Shortness of Breath',
@@ -29,6 +34,86 @@ const SYMPTOM_TYPES = [
   'Other',
 ];
 
+const SEVERITY_DESCRIPTIONS: Record<string, Record<number, string>> = {
+  'Dizziness': {
+    1: 'No dizziness',
+    2: 'Mild lightheadedness, barely noticeable',
+    3: 'Moderate dizziness, can still perform daily tasks',
+    4: 'Severe dizziness, difficulty standing or walking',
+    5: 'Cannot function, need to lie down',
+  },
+  'Fainting': {
+    1: 'No fainting',
+    2: 'Mild lightheadedness, barely noticeable',
+    3: 'Moderate fainting, need to lie down',
+    4: 'Severe fainting, cannot stand or walk',
+    5: 'Cannot function, intense pain',
+  },
+  'Chest Pain': {
+    1: 'No pain',
+    2: 'Mild discomfort, barely noticeable',
+    3: 'Moderate pain but tolerable',
+    4: 'Severe pain, very distressing',
+    5: 'Worst pain imaginable, cannot function',
+  },
+  'Racing Heart': {
+    1: 'Normal heart rate',
+    2: 'Mildly elevated, barely noticeable',
+    3: 'Moderately fast, uncomfortable',
+    4: 'Very rapid heartbeat, distressing',
+    5: 'Heart racing uncontrollably, extremely distressing',
+  },
+  'Shortness of Breath': {
+    1: 'Breathing normally',
+    2: 'Mildly winded, minimal impact',
+    3: 'Moderate breathlessness, limits some activities',
+    4: 'Severe difficulty breathing, hard to talk',
+    5: 'Cannot breathe adequately, gasping',
+  },
+  'Palpitations': {
+    1: 'No palpitations',
+    2: 'Mild flutter, barely noticeable',
+    3: 'Moderate irregular heartbeat, uncomfortable',
+    4: 'Severe palpitations, very distressing',
+    5: 'Constant palpitations, cannot function',
+  },
+  'Fatigue': {
+    1: 'No fatigue, full energy',
+    2: 'Mildly tired but functional',
+    3: 'Moderately tired, need extra rest',
+    4: 'Severe exhaustion, can barely function',
+    5: 'Complete exhaustion, cannot get out of bed',
+  },
+  'Sense of Doom': {
+    1: 'No anxiety or dread',
+    2: 'Mild unease, barely noticeable',
+    3: 'Moderate anxiety or sense of dread',
+    4: 'Severe panic, overwhelming fear',
+    5: 'Extreme terror, complete sense of impending disaster',
+  },
+  'Weakness': {
+    1: 'No weakness, normal strength',
+    2: 'Mildly weak but functional',
+    3: 'Moderate weakness, some difficulty with activities',
+    4: 'Severe weakness, can barely move',
+    5: 'Complete weakness, cannot move',
+  },
+  'Loss of Vision': {
+    1: 'No vision problems',
+    2: 'Mild blurriness or spots',
+    3: 'Moderate vision changes or impairment',
+    4: 'Severe vision loss, nearly blind',
+    5: 'Complete loss of vision',
+  },
+  'Other': {
+    1: 'No symptoms',
+    2: 'Mild symptoms, barely noticeable',
+    3: 'Moderate symptoms, manageable',
+    4: 'Severe symptoms, very distressing',
+    5: 'Worst symptoms imaginable, cannot function',
+  },
+};
+
 interface PreviousSymptom {
   severity: number;
   occurredAt: string;
@@ -38,12 +123,48 @@ export default function SymptomEntry() {
   const { user } = useAuth();
   const router = useRouter();
   const [selectedType, setSelectedType] = useState('');
-  const [severity, setSeverity] = useState(5);
+  const [severity, setSeverity] = useState(3);
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [previousSymptom, setPreviousSymptom] = useState<PreviousSymptom | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const textAreaSectionRef = useRef<View>(null);
+  const textAreaFocusedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const HEADER_APPROX = 100;
+  const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kbHeight = e.endCoordinates.height;
+      setKeyboardHeight(kbHeight);
+      if (!textAreaFocusedRef.current || !textAreaSectionRef.current || !scrollRef.current) return;
+      const windowHeight = Dimensions.get('window').height;
+      const maxVisibleY = windowHeight - kbHeight - HEADER_APPROX - PAD_ABOVE_KEYBOARD;
+      timeoutId = setTimeout(() => {
+        textAreaSectionRef.current?.measureInWindow((_x, y, _w, h) => {
+          const sectionBottom = y + h;
+          const scrollDelta = sectionBottom - maxVisibleY;
+          if (scrollDelta > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + scrollDelta,
+              animated: true,
+            });
+          }
+        });
+      }, Platform.OS === 'ios' ? 200 : 400);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      clearTimeout(timeoutId);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const formatDateTime = (date: Date) =>
     date.toLocaleString('en-US', {
@@ -110,6 +231,11 @@ export default function SymptomEntry() {
     }
   };
 
+  const getSeverityDescription = () => {
+    if (!selectedType) return '';
+    return SEVERITY_DESCRIPTIONS[selectedType]?.[severity] || '';
+  };
+
   const handleSubmit = async () => {
     if (!selectedType) {
       Alert.alert('Error', 'Please select a symptom type');
@@ -149,158 +275,182 @@ export default function SymptomEntry() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#1a1a1a" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Log Symptom</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Symptom Type</Text>
-          <View style={styles.typeGrid}>
-            {SYMPTOM_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.typeButton,
-                  selectedType === type && styles.typeButtonSelected,
-                ]}
-                onPress={() => setSelectedType(type)}
-              >
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    selectedType === type && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#1a1a1a" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Log Symptom</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        {previousSymptom && (
-          <View style={styles.previousSymptomBox}>
-            <View style={styles.previousSymptomHeader}>
-              <TrendingUp color="#0066cc" size={18} />
-              <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
-            </View>
-            <View style={styles.previousSymptomContent}>
-              <View style={styles.previousSymptomItem}>
-                <Text style={styles.previousSymptomLabel}>Last severity:</Text>
-                <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/10</Text>
-              </View>
-              <View style={styles.previousSymptomItem}>
-                <Calendar color="#666" size={16} />
-                <Text style={styles.previousSymptomDate}>
-                  {formatDate(previousSymptom.occurredAt)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.label}>When did this symptom occur?</Text>
-          {Platform.OS === 'web' ? (
-            <input
-              type="datetime-local"
-              value={toLocalISOString(occurredAt)}
-              onChange={(e) => setOccurredAt(new Date(e.target.value))}
-              style={{
-                width: '100%',
-                padding: 14,
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1px solid #ddd',
-                backgroundColor: '#f9f9f9',
-                fontFamily: 'system-ui',
-              }}
-            />
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.dateTimeButton}
-                onPress={() => setShowPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Clock color="#0066cc" size={20} />
-                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-              </TouchableOpacity>
-              {showPicker && (
-                <DateTimePicker
-                  value={occurredAt}
-                  mode="datetime"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onPickerChange}
-                  textColor='black'
-                  accentColor='black'
-                />
-              )}
-              {Platform.OS === 'ios' && showPicker && (
-                <TouchableOpacity
-                  style={styles.donePickerButton}
-                  onPress={() => setShowPicker(false)}
-                >
-                  <Text style={styles.donePickerText}>Done</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Severity (1-10)</Text>
-          <View style={styles.severityContainer}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-              <TouchableOpacity
-                key={num}
-                style={[
-                  styles.severityButton,
-                  severity === num && styles.severityButtonSelected,
-                ]}
-                onPress={() => setSeverity(num)}
-              >
-                <Text
-                  style={[
-                    styles.severityText,
-                    severity === num && styles.severityTextSelected,
-                  ]}
-                >
-                  {num}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Additional Details</Text>
-          <TextInput
-            style={styles.textArea}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe your symptom in more detail..."
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(ev: { nativeEvent: { contentOffset: { y: number } } }) => { scrollYRef.current = ev.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Saving...' : 'Log Symptom'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={styles.section}>
+            <Text style={styles.label}>Symptom Type</Text>
+            <View style={styles.typeGrid}>
+              {SYMPTOM_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    selectedType === type && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      selectedType === type && styles.typeButtonTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {previousSymptom && (
+            <View style={styles.previousSymptomBox}>
+              <View style={styles.previousSymptomHeader}>
+                <TrendingUp color={theme.primary} size={18} />
+                <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
+              </View>
+              <View style={styles.previousSymptomContent}>
+                <View style={styles.previousSymptomItem}>
+                  <Text style={styles.previousSymptomLabel}>Last severity:</Text>
+                  <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/5</Text>
+                </View>
+                <View style={styles.previousSymptomItem}>
+                  <Calendar color="#666" size={16} />
+                  <Text style={styles.previousSymptomDate}>
+                    {formatDate(previousSymptom.occurredAt)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <Text style={styles.label}>When did this symptom occur?</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="datetime-local"
+                value={toLocalISOString(occurredAt)}
+                onChange={(e) => setOccurredAt(new Date(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: 14,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1px solid #ddd',
+                  backgroundColor: '#f9f9f9',
+                  fontFamily: 'system-ui',
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Clock color={theme.primary} size={20} />
+                  <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+                </TouchableOpacity>
+                {showPicker && (
+                  <DateTimePicker
+                    value={occurredAt}
+                    mode="datetime"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onPickerChange}
+                    maximumDate={new Date()}
+                    textColor='black'
+                    accentColor='black'
+                  />
+                )}
+                {Platform.OS === 'ios' && showPicker && (
+                  <TouchableOpacity
+                    style={styles.donePickerButton}
+                    onPress={() => setShowPicker(false)}
+                  >
+                    <Text style={styles.donePickerText}>Done</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Severity (1-5)</Text>
+            <View style={styles.severityContainer}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.severityButton,
+                    severity === num && styles.severityButtonSelected,
+                  ]}
+                  onPress={() => setSeverity(num)}
+                >
+                  <Text
+                    style={[
+                      styles.severityText,
+                      severity === num && styles.severityTextSelected,
+                    ]}
+                  >
+                    {num}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {selectedType && (
+              <View style={styles.severityDescriptionBox}>
+                <Text style={styles.severityDescriptionText}>
+                  {getSeverityDescription()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
+            <Text style={styles.label}>Additional Details</Text>
+            <TextInput
+              style={styles.textArea}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe your symptom in more detail..."
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              onFocus={() => { textAreaFocusedRef.current = true; }}
+              onBlur={() => { textAreaFocusedRef.current = false; }}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Saving...' : 'Log Symptom'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -330,6 +480,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
   section: {
     marginBottom: 32,
   },
@@ -353,8 +507,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   typeButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   typeButtonText: {
     fontSize: 14,
@@ -366,12 +520,13 @@ const styles = StyleSheet.create({
   },
   severityContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    gap: 8,
   },
   severityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
@@ -379,16 +534,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   severityButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   severityText: {
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#666',
   },
   severityTextSelected: {
     color: '#fff',
     fontWeight: '600',
+  },
+  severityDescriptionBox: {
+    marginTop: 16,
+    padding: 14,
+    backgroundColor: theme.primaryLight,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.primary,
+  },
+  severityDescriptionText: {
+    fontSize: 15,
+    color: theme.primary,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   textArea: {
     borderWidth: 1,
@@ -400,7 +570,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -415,7 +585,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   previousSymptomBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
@@ -431,7 +601,7 @@ const styles = StyleSheet.create({
   previousSymptomTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0066cc',
+    color: theme.primary,
   },
   previousSymptomContent: {
     gap: 8,
@@ -474,7 +644,7 @@ const styles = StyleSheet.create({
   },
   donePickerText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
 });

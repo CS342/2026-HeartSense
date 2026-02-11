@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { HelpCircle, ChevronDown, ChevronUp, ArrowLeft, MessageCircle } from 'lucide-react-native';
+import { theme } from '@/theme/colors';
 
 interface FAQ {
   id: string;
@@ -68,41 +69,17 @@ export default function HelpScreen() {
     setExpandedFAQ(expandedFAQ === id ? null : id);
   };
 
-  const handleAskAI = () => {
-    Alert.alert(
-      'Ask AI Assistant',
-      'AI assistance feature coming soon. This will allow you to ask questions about your health tracking and get personalized insights.',
-      [{ text: 'OK' }]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#0066cc" size={24} />
+          <ArrowLeft color={theme.primary} size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & Support</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.aiButton} onPress={handleAskAI}>
-            <View style={styles.aiButtonContent}>
-              <View style={styles.aiIconContainer}>
-                <MessageCircle color="#fff" size={24} />
-              </View>
-              <View style={styles.aiTextContainer}>
-                <Text style={styles.aiButtonTitle}>Ask AI Assistant</Text>
-                <Text style={styles.aiButtonSubtitle}>
-                  Get quick answers to your health tracking questions
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
 
@@ -113,7 +90,7 @@ export default function HelpScreen() {
                 onPress={() => toggleFAQ(faq.id)}
               >
                 <View style={styles.faqQuestionContent}>
-                  <HelpCircle color="#0066cc" size={20} />
+                  <HelpCircle color={theme.primary} size={20} />
                   <Text style={styles.faqQuestionText}>{faq.question}</Text>
                 </View>
                 {expandedFAQ === faq.id ? (
@@ -182,7 +159,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   aiButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -256,7 +233,7 @@ const styles = StyleSheet.create({
   contactSection: {
     padding: 24,
     margin: 16,
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     borderRadius: 12,
     marginBottom: 32,
   },

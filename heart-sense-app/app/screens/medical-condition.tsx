@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,16 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { ArrowLeft } from 'lucide-react-native';
+import { logMedicalChange } from '@/lib/symptomService';
+import { ArrowLeft, Calendar } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { theme } from '@/theme/colors';
 
 const CONDITION_TYPES = [
   'New Medication',
@@ -36,6 +40,42 @@ export default function MedicalCondition() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const descriptionSectionRef = useRef<View>(null);
+  const descriptionFocusedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const HEADER_APPROX = 100;
+  const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kbHeight = e.endCoordinates.height;
+      setKeyboardHeight(kbHeight);
+      if (!descriptionFocusedRef.current || !descriptionSectionRef.current || !scrollRef.current) return;
+      const windowHeight = Dimensions.get('window').height;
+      const maxVisibleY = windowHeight - kbHeight - HEADER_APPROX - PAD_ABOVE_KEYBOARD;
+      timeoutId = setTimeout(() => {
+        descriptionSectionRef.current?.measureInWindow((_x, y, _w, h) => {
+          const sectionBottom = y + h;
+          const scrollDelta = sectionBottom - maxVisibleY;
+          if (scrollDelta > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + scrollDelta,
+              animated: true,
+            });
+          }
+        });
+      }, Platform.OS === 'ios' ? 200 : 400);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      clearTimeout(timeoutId);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const formatDateTime = (date: Date) =>
     date.toLocaleString('en-US', {
@@ -62,15 +102,23 @@ export default function MedicalCondition() {
       return;
     }
 
+    const uid = user?.uid;
+    if (!uid) {
+      Alert.alert('Error', 'You must be signed in to log a medical change');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'medical_conditions'), {
-        user_id: user?.uid,
-        condition_type: selectedType,
-        description,
-        occurred_at: occurredAt.toISOString(),
+      const { error } = await logMedicalChange({
+        userId: uid,
+        conditionType: selectedType,
+        description: description.trim(),
+        occurredAt,
       });
+
+      if (error) throw new Error(error);
 
       Alert.alert('Success', 'Medical condition change logged successfully');
       router.back();
@@ -83,15 +131,28 @@ export default function MedicalCondition() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#1a1a1a" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Medical Change</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#1a1a1a" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Medical Change</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <ScrollView style={styles.content}>
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(ev: { nativeEvent: { contentOffset: { y: number } } }) => { scrollYRef.current = ev.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
+        >
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
             Use this form to report any changes in your medical condition, medications, or healthcare visits.
@@ -130,7 +191,7 @@ export default function MedicalCondition() {
             onPress={() => setShowPicker(true)}
             activeOpacity={0.7}
           >
-            <Calendar color="#0066cc" size={20} />
+            <Calendar color={theme.primary} size={20} />
             <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
           </TouchableOpacity>
           {showPicker && (
@@ -139,6 +200,7 @@ export default function MedicalCondition() {
               mode="datetime"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onPickerChange}
+              maximumDate={new Date()}
               textColor='black'
               accentColor='black'
             />
@@ -153,7 +215,7 @@ export default function MedicalCondition() {
           )}
         </View>
 
-        <View style={styles.section}>
+        <View ref={descriptionSectionRef} style={styles.section} collapsable={false}>
           <Text style={styles.label}>Description *</Text>
           <TextInput
             style={styles.textArea}
@@ -163,6 +225,8 @@ export default function MedicalCondition() {
             multiline
             numberOfLines={6}
             textAlignVertical="top"
+            onFocus={() => { descriptionFocusedRef.current = true; }}
+            onBlur={() => { descriptionFocusedRef.current = false; }}
           />
           <Text style={styles.helperText}>
             Include medication names, dosages, diagnoses, or other relevant details
@@ -178,7 +242,8 @@ export default function MedicalCondition() {
             {loading ? 'Saving...' : 'Log Change'}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -208,15 +273,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
   infoBox: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,
   },
   infoText: {
     fontSize: 14,
-    color: '#1e40af',
+    color: theme.primary,
     lineHeight: 20,
   },
   section: {
@@ -242,8 +311,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   typeButtonSelected: {
-    backgroundColor: '#0066cc',
-    borderColor: '#0066cc',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   typeButtonText: {
     fontSize: 14,
@@ -273,7 +342,7 @@ const styles = StyleSheet.create({
   },
   donePickerText: {
     fontSize: 16,
-    color: '#0066cc',
+    color: theme.primary,
     fontWeight: '600',
   },
   textArea: {
@@ -291,7 +360,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitButton: {
-    backgroundColor: '#0066cc',
+    backgroundColor: theme.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
