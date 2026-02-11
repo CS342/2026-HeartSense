@@ -25,7 +25,7 @@ const db = admin.firestore();
  */
 export const dailyReminderCheck = onSchedule(
   {
-    schedule: "57 14 * * *", // TEMP: 2:57 PM for testing (was 9 AM)
+    schedule: "0 9 * * *", // Every day at 9 AM
     timeZone: "America/Los_Angeles",
   },
   async () => {
@@ -100,7 +100,7 @@ export const dailyReminderCheck = onSchedule(
  */
 export const inactivityAlertCheck = onSchedule(
   {
-    schedule: "59 14 * * *", // TEMP: 2:59 PM for testing (was 6 PM)
+    schedule: "0 18 * * *", // Every day at 6 PM
     timeZone: "America/Los_Angeles",
   },
   async () => {
