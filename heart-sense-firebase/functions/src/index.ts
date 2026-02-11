@@ -37,6 +37,7 @@ export {
   weeklySummaryGeneration,
   cleanupExpiredAlerts,
   monthlyStatsReset,
+  healthSyncCheck,
 } from "./engagement/scheduled";
 
 // ============================================
@@ -161,6 +162,52 @@ export const testInactivityCheck = onRequest(async (req, res) => {
     });
   } catch (error) {
     logger.error("Test inactivity check error:", error);
+    res.status(500).json({success: false, error: String(error)});
+  }
+});
+
+/**
+ * Test endpoint to trigger health sync alert notification
+ * Usage: curl "http://localhost:5001/PROJECT/us-central1/testHealthSyncAlert?userId=USER_ID"
+ */
+export const testHealthSyncAlert = onRequest(async (req, res) => {
+  logger.info("Manually triggering health sync alert for testing");
+  try {
+    const db = admin.firestore();
+    const userId = req.query.userId as string;
+
+    if (!userId) {
+      res.status(400).json({success: false, error: "userId query param required"});
+      return;
+    }
+
+    // Create a test health sync alert
+    const now = Timestamp.now();
+    const expiresAt = Timestamp.fromDate(
+      new Date(Date.now() + 4 * 60 * 60 * 1000) // 4 hours
+    );
+
+    const alertRef = await db.collection("engagement_alerts").add({
+      userId,
+      alertType: "health_insight",
+      title: "Health Data Sync Reminder",
+      message: "Your Apple Watch/Health data hasn't synced in over an hour. Open the app to sync your latest health metrics.",
+      priority: "medium",
+      isRead: false,
+      isDismissed: false,
+      createdAt: now,
+      expiresAt,
+      metadata: {type: "sync_reminder", hoursSinceSync: 1, test: true},
+    });
+
+    res.json({
+      success: true,
+      message: "Health sync alert created",
+      alertId: alertRef.id,
+      userId,
+    });
+  } catch (error) {
+    logger.error("Test health sync alert error:", error);
     res.status(500).json({success: false, error: String(error)});
   }
 });
