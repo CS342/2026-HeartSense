@@ -99,7 +99,7 @@ export async function getVitals(
 ): Promise<VitalsSample[]> {
   if (!checkAvailability()) return [];
 
-  const keys = ['heartRate', 'restingHeartRate', 'heartRateVariability', 'respiratoryRate'] as const;
+  const keys = ['heartRate', 'restingHeartRate', 'heartRateVariability', 'respiratoryRate', 'stepCount'] as const;
   const results: VitalsSample[] = [];
 
   for (const key of keys) {

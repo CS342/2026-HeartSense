@@ -1,6 +1,19 @@
 import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
+export interface SymptomVitalsContext {
+  windowStart: string;
+  windowEnd: string;
+  samples: Array<{
+    type: string;
+    value: number;
+    unit: string;
+    startDate: string;
+    endDate: string;
+  }>;
+  fetchedAt: string;
+}
+
 export interface Symptom {
   userId: string;
   symptomType: string;
@@ -8,6 +21,7 @@ export interface Symptom {
   description?: string;
   occurredAt: Date;
   createdAt: Date;
+  vitalsContext?: SymptomVitalsContext;
 }
 
 export interface Activity {
@@ -38,14 +52,20 @@ export interface WellbeingRating {
 
 export const logSymptom = async (symptomData: Omit<Symptom, 'createdAt'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'symptoms'), {
+    const docData: Record<string, any> = {
       userId: symptomData.userId,
       symptomType: symptomData.symptomType,
       severity: symptomData.severity,
       description: symptomData.description || '',
       occurredAt: Timestamp.fromDate(symptomData.occurredAt),
       createdAt: Timestamp.now(),
-    });
+    };
+
+    if (symptomData.vitalsContext) {
+      docData.vitalsContext = symptomData.vitalsContext;
+    }
+
+    const docRef = await addDoc(collection(db, 'symptoms'), docData);
     return { id: docRef.id, error: null };
   } catch (error: any) {
     return { id: null, error: error.message || 'Failed to log symptom' };

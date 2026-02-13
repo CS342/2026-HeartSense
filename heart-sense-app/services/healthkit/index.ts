@@ -18,3 +18,6 @@ export type {
 } from './types';
 
 export { HK_IDENTIFIERS, READ_IDENTIFIERS, WORKOUT_ACTIVITY_NAMES } from './types';
+
+export { performDailySync, fetchVitalsAroundSymptom } from './healthSyncService';
+export type { SymptomVitalsContext } from './healthSyncService';

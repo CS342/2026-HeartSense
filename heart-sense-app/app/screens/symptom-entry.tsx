@@ -16,6 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
+import { fetchVitalsAroundSymptom } from '@/services/healthkit/healthSyncService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
@@ -250,12 +251,23 @@ export default function SymptomEntry() {
     setLoading(true);
 
     try {
+      // Fetch vitals around symptom time (best-effort, non-fatal)
+      let vitalsContext;
+      if (Platform.OS === 'ios') {
+        try {
+          vitalsContext = await fetchVitalsAroundSymptom(occurredAt);
+        } catch {
+          // HealthKit unavailable or failed — log symptom without vitals
+        }
+      }
+
       const { error } = await logSymptom({
         userId: user.uid,
         symptomType: selectedType,
         severity,
         description,
         occurredAt,
+        vitalsContext,
       });
 
       if (error) throw new Error(error);

@@ -1,13 +1,15 @@
 /**
- * React hooks for HealthKit integration.
+ * React hook for HealthKit integration.
  *
  * useHealthKit() — one-stop hook for components that need:
  *   • availability check
  *   • permission request
- *   • latest vitals (auto-refreshed)
+ *   • latest vitals (one-shot fetch on init)
+ *
+ * Daily bulk sync and symptom-time vitals are handled by healthSyncService.
  */
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Platform, AppState } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import {
   checkAvailability,
   requestHealthPermissions,
@@ -16,8 +18,6 @@ import {
   type LatestVitals,
   type WorkoutRecord,
 } from '@/services/healthkit';
-
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface UseHealthKitResult {
   /** true on iOS with HealthKit support */
@@ -42,7 +42,6 @@ export function useHealthKit(): UseHealthKitResult {
   const [vitals, setVitals] = useState<LatestVitals | null>(null);
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!isAvailable) return;
@@ -54,7 +53,7 @@ export function useHealthKit(): UseHealthKitResult {
       setVitals(vitalsData);
       setWorkouts(workoutsData);
     } catch {
-      // silently ignore — will retry
+      // silently ignore
     }
   }, [isAvailable]);
 
@@ -81,23 +80,6 @@ export function useHealthKit(): UseHealthKitResult {
     }
     initialize();
   }, [initialize]);
-
-  // Periodic refresh while app is in foreground
-  useEffect(() => {
-    if (!isAuthorized || !isAvailable) return;
-
-    intervalRef.current = setInterval(fetchData, REFRESH_INTERVAL_MS);
-
-    // Also refresh when app returns from background
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') fetchData();
-    });
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      sub.remove();
-    };
-  }, [isAuthorized, isAvailable, fetchData]);
 
   return {
     isAvailable,
