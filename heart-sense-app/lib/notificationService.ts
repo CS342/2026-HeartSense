@@ -127,29 +127,41 @@ export function subscribeToEngagementAlerts(
     limit(10)
   );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    snapshot.docChanges().forEach(async (change) => {
-      if (change.type === "added") {
-        const alert = change.doc.data() as EngagementAlert;
-        alert.id = change.doc.id;
+  console.log("Subscribing to engagement alerts for user:", userId);
 
-        // Show local notification
-        await showLocalNotification(alert.title, alert.message, {
-          alertId: alert.id,
-          alertType: alert.alertType,
-        });
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      console.log("Engagement alerts snapshot received, changes:", snapshot.docChanges().length);
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === "added") {
+          const alert = change.doc.data() as EngagementAlert;
+          alert.id = change.doc.id;
 
-        // Mark as notified
-        await updateDoc(doc(db, "engagement_alerts", change.doc.id), {
-          notifiedAt: Timestamp.now(),
-        });
+          console.log("New engagement alert received:", alert.title);
 
-        if (onAlert) {
-          onAlert(alert);
+          // Show local notification
+          await showLocalNotification(alert.title, alert.message, {
+            alertId: alert.id,
+            alertType: alert.alertType,
+          });
+
+          // Mark as notified
+          await updateDoc(doc(db, "engagement_alerts", change.doc.id), {
+            notifiedAt: Timestamp.now(),
+          });
+
+          if (onAlert) {
+            onAlert(alert);
+          }
         }
-      }
-    });
-  });
+      });
+    },
+    (error) => {
+      console.error("Engagement alerts subscription error:", error);
+      console.error("You may need to create a composite index. Check the error message for a link.");
+    }
+  );
 
   return unsubscribe;
 }
