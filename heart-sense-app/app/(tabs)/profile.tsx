@@ -11,6 +11,8 @@ import {
   Alert,
   Switch,
   Platform,
+  Modal,
+  Pressable,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
@@ -41,16 +43,25 @@ import {
   BarChart3,
   Info,
   Send,
+  Watch,
+  Ruler,
+  Scale,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { sendPushNotificationCallable } from "@/lib/firebase";
 
+const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
+
 interface Profile {
   full_name: string;
   email: string;
-  date_of_birth: string; // store as "YYYY-MM-DD" string in Firestore (recommended) or empty string in UI
+  date_of_birth: string;
+  gender: string;
+  height_cm: string;
+  weight_kg: string;
+  apple_watch_consent: boolean;
 }
 
 interface AccountStats {
@@ -97,6 +108,10 @@ export default function ProfileScreen() {
     full_name: "",
     email: "",
     date_of_birth: "",
+    gender: "",
+    height_cm: "",
+    weight_kg: "",
+    apple_watch_consent: false,
   });
 
   const [stats, setStats] = useState<AccountStats>({
@@ -117,6 +132,11 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [sendingTestNotification, setSendingTestNotification] = useState(false);
+  const [infoModal, setInfoModal] = useState<{
+    visible: boolean;
+    title: string;
+    content: string;
+  }>({ visible: false, title: "", content: "" });
 
   const defaultDobDate = (() => {
     const d = new Date();
@@ -192,13 +212,20 @@ export default function ProfileScreen() {
           full_name: (data.full_name as string) || "",
           email: (data.email as string) || user.email || "",
           date_of_birth: (data.date_of_birth as string) || "",
+          gender: (data.gender as string) || "",
+          height_cm: data.height_cm != null ? String(data.height_cm) : "",
+          weight_kg: data.weight_kg != null ? String(data.weight_kg) : "",
+          apple_watch_consent: !!data.apple_watch_consent,
         });
       } else {
-        // fallback (shouldn't happen after ensure)
         setProfile({
           full_name: "",
           email: user.email || "",
           date_of_birth: "",
+          gender: "",
+          height_cm: "",
+          weight_kg: "",
+          apple_watch_consent: false,
         });
       }
     } catch (error) {
@@ -335,11 +362,25 @@ export default function ProfileScreen() {
   const handleSave = async () => {
     if (!user) return;
 
+    const heightNum = profile.height_cm ? parseFloat(profile.height_cm) : null;
+    const weightNum = profile.weight_kg ? parseFloat(profile.weight_kg) : null;
+    if (profile.height_cm && (isNaN(heightNum!) || heightNum! <= 0 || heightNum! > 300)) {
+      Alert.alert("Invalid input", "Please enter a valid height in cm (1–300).");
+      return;
+    }
+    if (profile.weight_kg && (isNaN(weightNum!) || weightNum! <= 0 || weightNum! > 500)) {
+      Alert.alert("Invalid input", "Please enter a valid weight in kg (1–500).");
+      return;
+    }
+
     setLoading(true);
     try {
       await updateDoc(doc(db, "profiles", user.uid), {
         full_name: profile.full_name,
-        date_of_birth: profile.date_of_birth ? profile.date_of_birth : null, // store null if empty
+        date_of_birth: profile.date_of_birth || null,
+        gender: profile.gender || null,
+        height_cm: heightNum ?? null,
+        weight_kg: weightNum ?? null,
         updated_at: serverTimestamp(),
       });
 
@@ -352,6 +393,34 @@ export default function ProfileScreen() {
       setLoading(false);
     }
   };
+
+  const openInfoModal = (title: string, content: string) => {
+    setInfoModal({ visible: true, title, content });
+  };
+
+  const closeInfoModal = () => {
+    setInfoModal((prev) => ({ ...prev, visible: false }));
+  };
+
+  const DATA_PRIVACY_CONTENT =
+    "How your data is shared:\n\n" +
+    "• Your profile information, health logs (symptoms, activities, wellbeing ratings), and wearable data are stored securely.\n\n" +
+    "• This data is accessible to the Heart Sense research team for the purposes of the clinical study.\n\n" +
+    "• The research team uses your data solely for study analysis and does not share it with third parties for marketing or commercial purposes.";
+
+  const TERMS_CONTENT =
+    "If you have any concerns about your participation, data, or the study:\n\n" +
+    "• Please contact the research team directly. They handle all participant inquiries and concerns.\n\n" +
+    "• By participating, you have consented to: logging wellbeing daily, sharing your logged data (symptoms, activities, wellbeing ratings), and sharing Apple Watch data (heart rate, accelerometer, step count) if you opted in.\n\n" +
+    "• The research team will address any questions about what you have consented to.";
+
+  const APPLE_WATCH_CONTENT =
+    "Apple Watch Data Collection:\n\n" +
+    "When you consented during onboarding, the app collects the following from your Apple Watch:\n\n" +
+    "• Heart rate\n" +
+    "• Accelerometer data\n" +
+    "• Step count\n\n" +
+    "This data is shared with the research team for the Heart Sense clinical study.";
 
   const handleSignOut = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -431,6 +500,34 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Modal
+        visible={infoModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeInfoModal}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeInfoModal}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{infoModal.title}</Text>
+              <TouchableOpacity onPress={closeInfoModal} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              <Text style={styles.modalBody}>{infoModal.content}</Text>
+            </ScrollView>
+            <TouchableOpacity style={styles.modalButton} onPress={closeInfoModal}>
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
       </View>
@@ -595,6 +692,92 @@ export default function ProfileScreen() {
               )}
             </View>
           </View>
+
+          <View style={styles.field}>
+            <View style={styles.fieldIcon}>
+              <User color="#666" size={20} />
+            </View>
+            <View style={styles.fieldContent}>
+              <Text style={styles.fieldLabel}>Gender</Text>
+              {editing ? (
+                <View style={styles.genderRow}>
+                  {GENDER_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.genderOption,
+                        profile.gender === opt && styles.genderOptionSelected,
+                      ]}
+                      onPress={() => setProfile((p) => ({ ...p, gender: opt }))}
+                    >
+                      <Text
+                        style={[
+                          styles.genderOptionText,
+                          profile.gender === opt && styles.genderOptionTextSelected,
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.fieldValue}>
+                  {profile.gender || "Not set"}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.fieldIcon}>
+              <Ruler color="#666" size={20} />
+            </View>
+            <View style={styles.fieldContent}>
+              <Text style={styles.fieldLabel}>Height (cm)</Text>
+              {editing ? (
+                <TextInput
+                  style={styles.input}
+                  value={profile.height_cm}
+                  onChangeText={(text) =>
+                    setProfile((p) => ({ ...p, height_cm: text }))
+                  }
+                  placeholder="e.g. 170"
+                  keyboardType="numeric"
+                  placeholderTextColor="#999"
+                />
+              ) : (
+                <Text style={styles.fieldValue}>
+                  {profile.height_cm ? `${profile.height_cm} cm` : "Not set"}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.fieldIcon}>
+              <Scale color="#666" size={20} />
+            </View>
+            <View style={styles.fieldContent}>
+              <Text style={styles.fieldLabel}>Weight (kg)</Text>
+              {editing ? (
+                <TextInput
+                  style={styles.input}
+                  value={profile.weight_kg}
+                  onChangeText={(text) =>
+                    setProfile((p) => ({ ...p, weight_kg: text }))
+                  }
+                  placeholder="e.g. 70"
+                  keyboardType="numeric"
+                  placeholderTextColor="#999"
+                />
+              ) : (
+                <Text style={styles.fieldValue}>
+                  {profile.weight_kg ? `${profile.weight_kg} kg` : "Not set"}
+                </Text>
+              )}
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -699,14 +882,44 @@ export default function ProfileScreen() {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Data Privacy</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => openInfoModal("Data Privacy", DATA_PRIVACY_CONTENT)}>
               <Text style={styles.linkText}>View Policy</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Terms of Service</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => openInfoModal("Terms of Service", TERMS_CONTENT)}>
               <Text style={styles.linkText}>View Terms</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Watch color={theme.primary} size={20} />
+            <Text style={styles.sectionTitle}>Apple Watch Data</Text>
+          </View>
+          <View
+            style={[
+              styles.appleWatchStatus,
+              !profile.apple_watch_consent && styles.appleWatchStatusOff,
+            ]}
+          >
+            <Text
+              style={[
+                styles.appleWatchStatusText,
+                !profile.apple_watch_consent && styles.appleWatchStatusTextOff,
+              ]}
+            >
+              {profile.apple_watch_consent
+                ? "You have consented to sharing Apple Watch data."
+                : "You have not consented to sharing Apple Watch data."}
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Apple Watch data collection</Text>
+            <TouchableOpacity onPress={() => openInfoModal("Apple Watch Data", APPLE_WATCH_CONTENT)}>
+              <Text style={styles.linkText}>View Info</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -831,12 +1044,17 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 14, fontWeight: "600", color: theme.primary },
   field: {
     flexDirection: "row",
+    alignItems: "flex-start",
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e5e5e5",
   },
-  fieldIcon: { marginRight: 12, paddingTop: 2 },
-  fieldContent: { flex: 1 },
+  fieldIcon: {
+    width: 28,
+    marginRight: 12,
+    paddingTop: 2,
+  },
+  fieldContent: { flex: 1, minWidth: 0 },
   fieldLabel: { fontSize: 12, color: "#666", marginBottom: 4 },
   fieldValue: { fontSize: 16, color: "#1a1a1a" },
   input: {
@@ -849,6 +1067,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
   },
   inputPlaceholder: { fontSize: 16, color: "#999" },
+  genderRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  genderOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: "#f9f9f9",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  genderOptionSelected: {
+    backgroundColor: theme.primaryLight,
+    borderColor: theme.primary,
+  },
+  genderOptionText: {
+    fontSize: 14,
+    color: "#374151",
+  },
+  genderOptionTextSelected: {
+    color: theme.primary,
+    fontWeight: "600",
+  },
   donePickerButton: { alignItems: "center", paddingVertical: 12 },
   donePickerText: { fontSize: 16, color: theme.primary, fontWeight: "600" },
   buttonContainer: { padding: 16, gap: 12 },
@@ -900,5 +1143,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#fff",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    width: "100%",
+    maxWidth: 400,
+    height: "85%",
+    maxHeight: 600,
+    overflow: "hidden",
+    flexDirection: "column",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e5e5",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1a1a1a",
+  },
+  modalClose: {
+    fontSize: 20,
+    color: "#666",
+    fontWeight: "400",
+  },
+  modalScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  modalScrollContent: {
+    padding: 20,
+    paddingBottom: 32,
+  },
+  modalBody: {
+    fontSize: 15,
+    color: "#374151",
+    lineHeight: 24,
+  },
+  modalButton: {
+    margin: 20,
+    padding: 16,
+    backgroundColor: theme.primary,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  appleWatchStatus: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  appleWatchStatusText: {
+    fontSize: 14,
+    color: "#166534",
+    fontWeight: "500",
+  },
+  appleWatchStatusOff: {
+    backgroundColor: "#f3f4f6",
+    borderColor: "#e5e7eb",
+  },
+  appleWatchStatusTextOff: {
+    color: "#6b7280",
   },
 });

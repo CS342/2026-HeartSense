@@ -34,7 +34,7 @@ export default function Login() {
 
     try {
       await signIn(email, password);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
     } finally {

@@ -45,7 +45,7 @@ export default function Signup() {
 
     try {
       await signUp(email, password, fullName);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {
