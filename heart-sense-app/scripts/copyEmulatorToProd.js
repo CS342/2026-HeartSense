@@ -3,7 +3,7 @@ const { Firestore } = require("@google-cloud/firestore");
 
 // 1) Emulator Firestore client
 const emulatorDb = new Firestore({
-  projectId: process.env.FIREBASE_PROJECT_ID || "your-project-id",
+  projectId: process.env.FIREBASE_PROJECT_ID || "cs342-2026-wong-3qriyd12e",
   host: "127.0.0.1",
   port: 8080,
   ssl: false,
@@ -12,7 +12,7 @@ const emulatorDb = new Firestore({
 // 2) Prod Firestore (Admin SDK)
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
-  projectId: process.env.FIREBASE_PROJECT_ID || "your-project-id",
+  projectId: process.env.FIREBASE_PROJECT_ID || "cs342-2026-wong-3qriyd12e",
 });
 const prodDb = admin.firestore();
 

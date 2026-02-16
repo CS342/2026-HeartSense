@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -126,6 +129,42 @@ export default function SymptomEntry() {
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [previousSymptom, setPreviousSymptom] = useState<PreviousSymptom | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const textAreaSectionRef = useRef<View>(null);
+  const textAreaFocusedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const HEADER_APPROX = 100;
+  const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kbHeight = e.endCoordinates.height;
+      setKeyboardHeight(kbHeight);
+      if (!textAreaFocusedRef.current || !textAreaSectionRef.current || !scrollRef.current) return;
+      const windowHeight = Dimensions.get('window').height;
+      const maxVisibleY = windowHeight - kbHeight - HEADER_APPROX - PAD_ABOVE_KEYBOARD;
+      timeoutId = setTimeout(() => {
+        textAreaSectionRef.current?.measureInWindow((_x, y, _w, h) => {
+          const sectionBottom = y + h;
+          const scrollDelta = sectionBottom - maxVisibleY;
+          if (scrollDelta > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + scrollDelta,
+              animated: true,
+            });
+          }
+        });
+      }, Platform.OS === 'ios' ? 200 : 400);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      clearTimeout(timeoutId);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const formatDateTime = (date: Date) =>
     date.toLocaleString('en-US', {
@@ -236,166 +275,182 @@ export default function SymptomEntry() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#1a1a1a" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Log Symptom</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Symptom Type</Text>
-          <View style={styles.typeGrid}>
-            {SYMPTOM_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.typeButton,
-                  selectedType === type && styles.typeButtonSelected,
-                ]}
-                onPress={() => setSelectedType(type)}
-              >
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    selectedType === type && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#1a1a1a" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Log Symptom</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        {previousSymptom && (
-          <View style={styles.previousSymptomBox}>
-            <View style={styles.previousSymptomHeader}>
-              <TrendingUp color={theme.primary} size={18} />
-              <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
-            </View>
-            <View style={styles.previousSymptomContent}>
-              <View style={styles.previousSymptomItem}>
-                <Text style={styles.previousSymptomLabel}>Last severity:</Text>
-                <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/5</Text>
-              </View>
-              <View style={styles.previousSymptomItem}>
-                <Calendar color="#666" size={16} />
-                <Text style={styles.previousSymptomDate}>
-                  {formatDate(previousSymptom.occurredAt)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.label}>When did this symptom occur?</Text>
-          {Platform.OS === 'web' ? (
-            <input
-              type="datetime-local"
-              value={toLocalISOString(occurredAt)}
-              onChange={(e) => setOccurredAt(new Date(e.target.value))}
-              style={{
-                width: '100%',
-                padding: 14,
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1px solid #ddd',
-                backgroundColor: '#f9f9f9',
-                fontFamily: 'system-ui',
-              }}
-            />
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.dateTimeButton}
-                onPress={() => setShowPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Clock color={theme.primary} size={20} />
-                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-              </TouchableOpacity>
-              {showPicker && (
-                <DateTimePicker
-                  value={occurredAt}
-                  mode="datetime"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onPickerChange}
-                  maximumDate={new Date()}
-                  textColor='black'
-                  accentColor='black'
-                />
-              )}
-              {Platform.OS === 'ios' && showPicker && (
-                <TouchableOpacity
-                  style={styles.donePickerButton}
-                  onPress={() => setShowPicker(false)}
-                >
-                  <Text style={styles.donePickerText}>Done</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Severity (1-5)</Text>
-          <View style={styles.severityContainer}>
-            {[1, 2, 3, 4, 5].map((num) => (
-              <TouchableOpacity
-                key={num}
-                style={[
-                  styles.severityButton,
-                  severity === num && styles.severityButtonSelected,
-                ]}
-                onPress={() => setSeverity(num)}
-              >
-                <Text
-                  style={[
-                    styles.severityText,
-                    severity === num && styles.severityTextSelected,
-                  ]}
-                >
-                  {num}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {selectedType && (
-            <View style={styles.severityDescriptionBox}>
-              <Text style={styles.severityDescriptionText}>
-                {getSeverityDescription()}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Additional Details</Text>
-          <TextInput
-            style={styles.textArea}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe your symptom in more detail..."
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(ev: { nativeEvent: { contentOffset: { y: number } } }) => { scrollYRef.current = ev.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Saving...' : 'Log Symptom'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={styles.section}>
+            <Text style={styles.label}>Symptom Type</Text>
+            <View style={styles.typeGrid}>
+              {SYMPTOM_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    selectedType === type && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      selectedType === type && styles.typeButtonTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {previousSymptom && (
+            <View style={styles.previousSymptomBox}>
+              <View style={styles.previousSymptomHeader}>
+                <TrendingUp color={theme.primary} size={18} />
+                <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
+              </View>
+              <View style={styles.previousSymptomContent}>
+                <View style={styles.previousSymptomItem}>
+                  <Text style={styles.previousSymptomLabel}>Last severity:</Text>
+                  <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/5</Text>
+                </View>
+                <View style={styles.previousSymptomItem}>
+                  <Calendar color="#666" size={16} />
+                  <Text style={styles.previousSymptomDate}>
+                    {formatDate(previousSymptom.occurredAt)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.section}>
+            <Text style={styles.label}>When did this symptom occur?</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="datetime-local"
+                value={toLocalISOString(occurredAt)}
+                onChange={(e) => setOccurredAt(new Date(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: 14,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1px solid #ddd',
+                  backgroundColor: '#f9f9f9',
+                  fontFamily: 'system-ui',
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Clock color={theme.primary} size={20} />
+                  <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+                </TouchableOpacity>
+                {showPicker && (
+                  <DateTimePicker
+                    value={occurredAt}
+                    mode="datetime"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onPickerChange}
+                    maximumDate={new Date()}
+                    textColor='black'
+                    accentColor='black'
+                  />
+                )}
+                {Platform.OS === 'ios' && showPicker && (
+                  <TouchableOpacity
+                    style={styles.donePickerButton}
+                    onPress={() => setShowPicker(false)}
+                  >
+                    <Text style={styles.donePickerText}>Done</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Severity (1-5)</Text>
+            <View style={styles.severityContainer}>
+              {[1, 2, 3, 4, 5].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.severityButton,
+                    severity === num && styles.severityButtonSelected,
+                  ]}
+                  onPress={() => setSeverity(num)}
+                >
+                  <Text
+                    style={[
+                      styles.severityText,
+                      severity === num && styles.severityTextSelected,
+                    ]}
+                  >
+                    {num}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {selectedType && (
+              <View style={styles.severityDescriptionBox}>
+                <Text style={styles.severityDescriptionText}>
+                  {getSeverityDescription()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
+            <Text style={styles.label}>Additional Details</Text>
+            <TextInput
+              style={styles.textArea}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe your symptom in more detail..."
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              onFocus={() => { textAreaFocusedRef.current = true; }}
+              onBlur={() => { textAreaFocusedRef.current = false; }}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Saving...' : 'Log Symptom'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -424,6 +479,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 32,

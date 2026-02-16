@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +49,46 @@ export default function ActivityEntry() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const textAreaSectionRef = useRef<View>(null);
+  const durationSectionRef = useRef<View>(null);
+  const textAreaFocusedRef = useRef(false);
+  const durationFocusedRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const HEADER_APPROX = 100;
+  const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      const kbHeight = e.endCoordinates.height;
+      setKeyboardHeight(kbHeight);
+      if (!scrollRef.current) return;
+      const sectionRef = textAreaFocusedRef.current ? textAreaSectionRef : durationFocusedRef.current ? durationSectionRef : null;
+      if (!sectionRef?.current) return;
+      const windowHeight = Dimensions.get('window').height;
+      const maxVisibleY = windowHeight - kbHeight - HEADER_APPROX - PAD_ABOVE_KEYBOARD;
+      timeoutId = setTimeout(() => {
+        sectionRef.current?.measureInWindow((_x, y, _w, h) => {
+          const sectionBottom = y + h;
+          const scrollDelta = sectionBottom - maxVisibleY;
+          if (scrollDelta > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + scrollDelta,
+              animated: true,
+            });
+          }
+        });
+      }, Platform.OS === 'ios' ? 200 : 400);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      clearTimeout(timeoutId);
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const formatDateTime = (date: Date) =>
     date.toLocaleString('en-US', {
@@ -115,152 +158,170 @@ export default function ActivityEntry() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft color="#1a1a1a" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Log Activity</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.label}>Activity Type</Text>
-          <View style={styles.typeGrid}>
-            {ACTIVITY_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.typeButton,
-                  selectedType === type && styles.typeButtonSelected,
-                ]}
-                onPress={() => setSelectedType(type)}
-              >
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    selectedType === type && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#1a1a1a" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Log Activity</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Intensity</Text>
-          <View style={styles.intensityContainer}>
-            {INTENSITY_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level.value}
-                style={[
-                  styles.intensityButton,
-                  intensity === level.value && {
-                    backgroundColor: level.color,
-                    borderColor: level.color,
-                  },
-                ]}
-                onPress={() => setIntensity(level.value as any)}
-              >
-                <Text
-                  style={[
-                    styles.intensityText,
-                    intensity === level.value && styles.intensityTextSelected,
-                  ]}
-                >
-                  {level.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>When did you perform this activity?</Text>
-          {Platform.OS === 'web' ? (
-            <input
-              type="datetime-local"
-              value={toLocalISOString(occurredAt)}
-              onChange={(e) => setOccurredAt(new Date(e.target.value))}
-              style={{
-                width: '100%',
-                padding: 14,
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1px solid #ddd',
-                backgroundColor: '#f9f9f9',
-                fontFamily: 'system-ui',
-              }}
-            />
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.dateTimeButton}
-                onPress={() => setShowPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Calendar color={theme.primary} size={20} />
-                <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-              </TouchableOpacity>
-              {showPicker && (
-                <DateTimePicker
-                  value={occurredAt}
-                  mode="datetime"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onPickerChange}
-                  maximumDate={new Date()}
-                  textColor='black'
-                  accentColor='black'
-                />
-              )}
-              {Platform.OS === 'ios' && showPicker && (
-                <TouchableOpacity
-                  style={styles.donePickerButton}
-                  onPress={() => setShowPicker(false)}
-                >
-                  <Text style={styles.donePickerText}>Done</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Duration (minutes)</Text>
-          <TextInput
-            style={styles.input}
-            value={duration}
-            onChangeText={setDuration}
-            placeholder="Enter duration in minutes"
-            keyboardType="number-pad"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Additional Details</Text>
-          <TextInput
-            style={styles.textArea}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe your activity in more detail..."
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+        <ScrollView
+          ref={scrollRef}
+          onScroll={(ev: { nativeEvent: { contentOffset: { y: number } } }) => { scrollYRef.current = ev.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          style={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Saving...' : 'Log Activity'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={styles.section}>
+            <Text style={styles.label}>Activity Type</Text>
+            <View style={styles.typeGrid}>
+              {ACTIVITY_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    selectedType === type && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      selectedType === type && styles.typeButtonTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Intensity</Text>
+            <View style={styles.intensityContainer}>
+              {INTENSITY_LEVELS.map((level) => (
+                <TouchableOpacity
+                  key={level.value}
+                  style={[
+                    styles.intensityButton,
+                    intensity === level.value && {
+                      backgroundColor: level.color,
+                      borderColor: level.color,
+                    },
+                  ]}
+                  onPress={() => setIntensity(level.value as any)}
+                >
+                  <Text
+                    style={[
+                      styles.intensityText,
+                      intensity === level.value && styles.intensityTextSelected,
+                    ]}
+                  >
+                    {level.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>When did you perform this activity?</Text>
+            {Platform.OS === 'web' ? (
+              <input
+                type="datetime-local"
+                value={toLocalISOString(occurredAt)}
+                onChange={(e) => setOccurredAt(new Date(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: 14,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1px solid #ddd',
+                  backgroundColor: '#f9f9f9',
+                  fontFamily: 'system-ui',
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Calendar color={theme.primary} size={20} />
+                  <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+                </TouchableOpacity>
+                {showPicker && (
+                  <DateTimePicker
+                    value={occurredAt}
+                    mode="datetime"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onPickerChange}
+                    maximumDate={new Date()}
+                    textColor='black'
+                    accentColor='black'
+                  />
+                )}
+                {Platform.OS === 'ios' && showPicker && (
+                  <TouchableOpacity
+                    style={styles.donePickerButton}
+                    onPress={() => setShowPicker(false)}
+                  >
+                    <Text style={styles.donePickerText}>Done</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+
+          <View ref={durationSectionRef} style={styles.section} collapsable={false}>
+            <Text style={styles.label}>Duration (minutes)</Text>
+            <TextInput
+              style={styles.input}
+              value={duration}
+              onChangeText={setDuration}
+              placeholder="Enter duration in minutes"
+              keyboardType="number-pad"
+              onFocus={() => { durationFocusedRef.current = true; }}
+              onBlur={() => { durationFocusedRef.current = false; }}
+            />
+          </View>
+
+          <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
+            <Text style={styles.label}>Additional Details</Text>
+            <TextInput
+              style={styles.textArea}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe your activity in more detail..."
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              onFocus={() => { textAreaFocusedRef.current = true; }}
+              onBlur={() => { textAreaFocusedRef.current = false; }}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Saving...' : 'Log Activity'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -289,6 +350,10 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   section: {
     marginBottom: 32,
