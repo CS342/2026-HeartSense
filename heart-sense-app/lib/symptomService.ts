@@ -151,11 +151,16 @@ export const countSymptomsSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'symptoms'),
       where('userId', '==', userId),
-      where('occurredAt', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
-
-    const querySnapshot = await getDocs(q);
-    return { count: querySnapshot.size, error: null };
+    const snapshot = await getDocs(q);
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurredAt;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -166,11 +171,16 @@ export const countActivitiesSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'activities'),
       where('userId', '==', userId),
-      where('occurredAt', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
-
-    const querySnapshot = await getDocs(q);
-    return { count: querySnapshot.size, error: null };
+    const snapshot = await getDocs(q);
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurredAt;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -194,10 +204,16 @@ export const countWellbeingRatingsSince = async (userId: string, since: Date) =>
     const q = query(
       collection(db, 'well_being_ratings'),
       where('user_id', '==', userId),
-      where('recorded_at', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
     const snapshot = await getDocs(q);
-    return { count: snapshot.size, error: null };
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().recorded_at;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -221,10 +237,16 @@ export const countMedicalChangesSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'medical_conditions'),
       where('user_id', '==', userId),
-      where('occurred_at', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
     const snapshot = await getDocs(q);
-    return { count: snapshot.size, error: null };
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurred_at;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
