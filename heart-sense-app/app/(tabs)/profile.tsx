@@ -73,7 +73,6 @@ interface AccountStats {
 
 interface NotificationPreferences {
   notify_daily_reminder: boolean;
-  notify_messages: boolean;
   notify_health_insights: boolean;
   notify_activity_milestones: boolean;
 }
@@ -123,7 +122,6 @@ export default function ProfileScreen() {
 
   const [notifications, setNotifications] = useState<NotificationPreferences>({
     notify_daily_reminder: true,
-    notify_messages: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
   });
@@ -244,7 +242,6 @@ export default function ProfileScreen() {
         const data: any = snap.data();
         setNotifications({
           notify_daily_reminder: !!data.notify_daily_reminder,
-          notify_messages: !!data.notify_messages,
           notify_health_insights: !!data.notify_health_insights,
           notify_activity_milestones: !!data.notify_activity_milestones,
         });
@@ -252,7 +249,6 @@ export default function ProfileScreen() {
         // create defaults
         const defaults: NotificationPreferences = {
           notify_daily_reminder: true,
-          notify_messages: true,
           notify_health_insights: true,
           notify_activity_milestones: true,
         };
@@ -801,25 +797,6 @@ export default function ProfileScreen() {
               trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
                 notifications.notify_daily_reminder ? theme.primary : "#f4f3f4"
-              }
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>New Messages</Text>
-              <Text style={styles.settingDescription}>
-                Notifications when you receive messages from providers
-              </Text>
-            </View>
-            <Switch
-              value={notifications.notify_messages}
-              onValueChange={(value) =>
-                updateNotificationPreference("notify_messages", value)
-              }
-              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
-              thumbColor={
-                notifications.notify_messages ? theme.primary : "#f4f3f4"
               }
             />
           </View>
