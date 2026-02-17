@@ -1,95 +1,72 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+/**
+ * HealthDataTracker — headless component that bridges HealthKit → Firebase.
+ *
+ * Mount this once inside a provider that supplies AuthContext.
+ * It requests HealthKit permissions on mount and triggers a once-daily
+ * bulk sync of the last 24 hours of health data to Firestore.
+ *
+ * Renders nothing — pure side-effect component.
+ */
+import { useEffect, useRef } from 'react';
+import { Platform, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { checkAvailability, requestHealthPermissions } from '@/services/healthkit';
+import { performDailySync } from '@/services/healthkit/healthSyncService';
 
-interface HealthDataTrackerProps {
-  onDataCollected?: (data: any) => void;
-}
-
-export function HealthDataTracker({ onDataCollected }: HealthDataTrackerProps) {
+export function HealthDataTracker() {
   const { user } = useAuth();
-  const [isTracking, setIsTracking] = useState(false);
+  const isSyncing = useRef(false);
+  const appStateRef = useRef(AppState.currentState);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      return;
-    }
-
-    startTracking();
-
-    return () => {
-      stopTracking();
-    };
-  }, []);
-
-  const startTracking = async () => {
-    setIsTracking(true);
-  };
-
-  const stopTracking = () => {
-    setIsTracking(false);
-  };
-
-  const saveHealthData = async (dataType: string, value: number, unit: string) => {
-    if (!user) return;
-
+  const runDailySync = async () => {
+    if (isSyncing.current || !user) return;
+    isSyncing.current = true;
     try {
-      await addDoc(collection(db, 'health_data'), {
-        user_id: user.uid,
-        data_type: dataType,
-        value,
-        unit,
-        recorded_at: new Date().toISOString(),
-      });
-
-      onDataCollected?.({ dataType, value, unit });
-    } catch (error) {
-      console.error('Error saving health data:', error);
+      await performDailySync(user.uid);
+    } catch (err) {
+      if (__DEV__) console.warn('[HealthDataTracker] Daily sync error:', err);
+    } finally {
+      isSyncing.current = false;
     }
   };
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.infoText}>
-          Health data tracking is available on mobile devices
-        </Text>
-      </View>
-    );
-  }
+  // Request HealthKit permissions + run daily sync on mount.
+  // A short delay after authorization gives iOS time to apply the permission
+  // grants before we query HealthKit (the authorization promise resolves when
+  // the dialog is *presented*, not when the user *responds*).
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !user || !checkAvailability()) return;
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.statusText}>
-        Health tracking: {isTracking ? 'Active' : 'Inactive'}
-      </Text>
-      <Text style={styles.infoText}>
-        This app can collect step count, heart rate, and accelerometer data from your device.
-        Enable permissions in your device settings to start tracking.
-      </Text>
-    </View>
-  );
+    let cancelled = false;
+    (async () => {
+      const granted = await requestHealthPermissions();
+      if (__DEV__) console.log('[HealthDataTracker] Permissions requested, granted:', granted);
+      if (granted && !cancelled) {
+        // Brief pause so iOS has time to persist the user's permission choices
+        await new Promise((r) => setTimeout(r, 1500));
+        if (!cancelled) runDailySync();
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Re-sync when app returns to foreground (still gated by "already synced today" check)
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !user) return;
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === 'active'
+      ) {
+        runDailySync();
+      }
+      appStateRef.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [user]);
+
+  return null;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#f0fdf4',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#86efac',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#15803d',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#166534',
-    lineHeight: 18,
-  },
-});

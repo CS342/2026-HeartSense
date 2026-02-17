@@ -1071,6 +1071,26 @@ const styles = StyleSheet.create({
   },
   donePickerButton: { alignItems: "center", paddingVertical: 12 },
   donePickerText: { fontSize: 16, color: theme.primary, fontWeight: "600" },
+  appleWatchStatus: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#86efac",
+  },
+  appleWatchStatusText: {
+    fontSize: 14,
+    color: "#166534",
+    fontWeight: "500",
+  },
+  appleWatchStatusOff: {
+    backgroundColor: "#f3f4f6",
+    borderColor: "#e5e7eb",
+  },
+  appleWatchStatusTextOff: {
+    color: "#6b7280",
+  },
   buttonContainer: { padding: 16, gap: 12 },
   button: {
     flexDirection: "row",
@@ -1180,25 +1200,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
-  },
-  appleWatchStatus: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: "#f0fdf4",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#86efac",
-  },
-  appleWatchStatusText: {
-    fontSize: 14,
-    color: "#166534",
-    fontWeight: "500",
-  },
-  appleWatchStatusOff: {
-    backgroundColor: "#f3f4f6",
-    borderColor: "#e5e7eb",
-  },
-  appleWatchStatusTextOff: {
-    color: "#6b7280",
   },
 });

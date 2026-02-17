@@ -14,12 +14,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { Heart, Watch, Calendar, User, ChevronRight, Ruler, Scale } from 'lucide-react-native';
+import { Heart, ClipboardList, Watch, Calendar, User, ChevronRight, Ruler, Scale } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer not to say'] as const;
+
 
 function parseLocalDate(isoDateStr: string): Date | null {
   if (!isoDateStr) return null;
@@ -62,7 +63,10 @@ export default function OnboardingScreen() {
   };
 
   const handleNextPage = () => {
-    if (!appleWatchConsent) return;
+    if (!appleWatchConsent) {
+      setError('Please consent to sharing Apple Watch data (heart rate, accelerometer, step count) to participate in the study.');
+      return;
+    }
     setError('');
     setPage(2);
   };
@@ -139,8 +143,8 @@ export default function OnboardingScreen() {
           <>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Watch color={theme.primary} size={24} />
-                <Text style={styles.sectionTitle}>Apple Watch Data</Text>
+                <ClipboardList color={theme.primary} size={24} />
+                <Text style={styles.sectionTitle}>About This Study</Text>
               </View>
               <Text style={styles.bodyText}>
                 Thank you for participating in the Heart Sense clinical study. You have already
@@ -148,9 +152,21 @@ export default function OnboardingScreen() {
               </Text>
               <Text style={[styles.bodyText, styles.bodyTextSpaced]}>
                 <Text style={styles.bold}>Your daily logs are essential.</Text> Please log your
-                wellbeing every day—this data directly helps our research.
+                wellbeing every day—this data directly helps our research understand patterns and
+                outcomes.
               </Text>
               <Text style={[styles.bodyText, styles.bodyTextSpaced]}>
+                All data you share and log (symptoms, activities, wellbeing ratings, and health
+                metrics) will be accessible to the research team as part of the study.
+              </Text>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Watch color={theme.primary} size={24} />
+                <Text style={styles.sectionTitle}>Apple Watch Data</Text>
+              </View>
+              <Text style={styles.bodyText}>
                 We will collect the following data from your Apple Watch:
               </Text>
               <View style={styles.bulletList}>
@@ -158,9 +174,6 @@ export default function OnboardingScreen() {
                 <Text style={styles.bulletItem}>• Accelerometer data</Text>
                 <Text style={styles.bulletItem}>• Step count</Text>
               </View>
-              <Text style={[styles.bodyText, styles.bodyTextSpaced]}>
-                All data you share will be accessible to the research team as part of the study.
-              </Text>
               <View style={styles.consentRow}>
                 <Text style={styles.consentLabel}>
                   I consent to sharing my Apple Watch data with the research team
@@ -173,6 +186,8 @@ export default function OnboardingScreen() {
                 />
               </View>
             </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <TouchableOpacity
               style={[styles.continueButton, !appleWatchConsent && styles.continueButtonDisabled]}
