@@ -43,13 +43,22 @@ async function shouldSyncToday(): Promise<boolean> {
 
 /**
  * Pull the last 24 hours of HealthKit data and persist to Firestore.
- * Skips if already synced today. Uses deterministic doc IDs for idempotency.
+ * Skips if already synced today (only marked after real data is written).
+ * Uses deterministic doc IDs for idempotency.
  */
 export async function performDailySync(
   userId: string,
 ): Promise<{ vitalsCount: number; workoutsCount: number; stepsCount: number }> {
-  if (!checkAvailability()) return { vitalsCount: 0, workoutsCount: 0, stepsCount: 0 };
-  if (!(await shouldSyncToday())) return { vitalsCount: 0, workoutsCount: 0, stepsCount: 0 };
+  if (!checkAvailability()) {
+    if (__DEV__) console.log('[healthSyncService] Skipped — HealthKit not available');
+    return { vitalsCount: 0, workoutsCount: 0, stepsCount: 0 };
+  }
+  if (!(await shouldSyncToday())) {
+    if (__DEV__) console.log('[healthSyncService] Skipped — already synced today');
+    return { vitalsCount: 0, workoutsCount: 0, stepsCount: 0 };
+  }
+
+  if (__DEV__) console.log('[healthSyncService] Starting daily sync…');
 
   const now = new Date();
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -61,6 +70,7 @@ export async function performDailySync(
   try {
     // ── Vitals (heart rate, resting HR, HRV, respiratory rate, steps) ──
     const vitals = await getVitals(yesterday, now);
+    if (__DEV__) console.log(`[healthSyncService] Fetched ${vitals.length} vitals samples from HealthKit`);
     for (const sample of vitals) {
       const docId = `${userId}_${sample.type}_${sample.startDate}`;
       await setDoc(doc(db, 'health_data', docId), {
@@ -76,6 +86,7 @@ export async function performDailySync(
 
     // ── Daily step totals ──
     const dailySteps = await getDailyActivity(yesterday, now);
+    if (__DEV__) console.log(`[healthSyncService] Fetched ${dailySteps.length} daily step records`);
     for (const day of dailySteps) {
       const docId = `${userId}_dailySteps_${day.date}`;
       await setDoc(doc(db, 'health_data', docId), {
@@ -95,6 +106,7 @@ export async function performDailySync(
     const recentWorkouts = workouts.filter(
       (w) => new Date(w.startDate).getTime() >= yesterday.getTime(),
     );
+    if (__DEV__) console.log(`[healthSyncService] Fetched ${recentWorkouts.length} workouts in last 24h`);
     for (const w of recentWorkouts) {
       const docId = `${userId}_workout_${w.uuid}`;
       await setDoc(doc(db, 'activities', docId), {
@@ -114,12 +126,19 @@ export async function performDailySync(
       workoutsCount++;
     }
 
-    // Mark today as synced
-    await AsyncStorage.setItem(LAST_SYNC_KEY, todayDateString());
+    const totalWritten = vitalsCount + stepsCount + workoutsCount;
+
+    // Only mark today as synced if we actually wrote data.
+    // This prevents the case where sync runs before HealthKit permissions
+    // are granted, gets 0 results, and then never retries.
+    if (totalWritten > 0) {
+      await AsyncStorage.setItem(LAST_SYNC_KEY, todayDateString());
+    }
 
     if (__DEV__) {
       console.log(
-        `[healthSyncService] Daily sync complete: ${vitalsCount} vitals, ${stepsCount} step records, ${workoutsCount} workouts`,
+        `[healthSyncService] Daily sync complete: ${vitalsCount} vitals, ${stepsCount} step records, ${workoutsCount} workouts` +
+          (totalWritten === 0 ? ' (no data — will retry on next launch)' : ''),
       );
     }
   } catch (err) {

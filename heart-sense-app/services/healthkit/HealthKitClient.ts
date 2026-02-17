@@ -10,7 +10,6 @@ import {
   requestAuthorization,
   getMostRecentQuantitySample,
   queryQuantitySamples,
-  queryStatisticsForQuantity,
   queryWorkoutSamples,
   getMostRecentWorkout,
 } from '@kingstinct/react-native-healthkit';
@@ -105,8 +104,8 @@ export async function getVitals(
   for (const key of keys) {
     try {
       const samples = await queryQuantitySamples(HK_IDENTIFIERS[key] as any, {
-        from,
-        to,
+        limit: 0,
+        filter: { date: { startDate: from, endDate: to } },
       });
       if (Array.isArray(samples)) {
         for (const s of samples) {
@@ -132,8 +131,8 @@ export async function getDailyActivity(
 
   try {
     const samples = await queryQuantitySamples(HK_IDENTIFIERS.stepCount as any, {
-      from,
-      to,
+      limit: 0,
+      filter: { date: { startDate: from, endDate: to } },
     });
 
     if (!Array.isArray(samples)) return [];

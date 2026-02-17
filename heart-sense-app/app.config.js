@@ -55,9 +55,7 @@ export default {
     updates: {
       url: "https://u.expo.dev/4171cdf0-600d-4f1f-8fbd-209ec90d4982",
     },
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    runtimeVersion: "1.0.0",
     extra: {
       // EAS project ID (links this app to EAS / expo.dev). Override with EXPO_PUBLIC_EAS_PROJECT_ID in .env if needed.
       projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "4171cdf0-600d-4f1f-8fbd-209ec90d4982",

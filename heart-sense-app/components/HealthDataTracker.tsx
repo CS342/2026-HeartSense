@@ -30,16 +30,25 @@ export function HealthDataTracker() {
     }
   };
 
-  // Request HealthKit permissions + run daily sync on mount
+  // Request HealthKit permissions + run daily sync on mount.
+  // A short delay after authorization gives iOS time to apply the permission
+  // grants before we query HealthKit (the authorization promise resolves when
+  // the dialog is *presented*, not when the user *responds*).
   useEffect(() => {
     if (Platform.OS !== 'ios' || !user || !checkAvailability()) return;
 
+    let cancelled = false;
     (async () => {
       const granted = await requestHealthPermissions();
-      if (granted) {
-        runDailySync();
+      if (__DEV__) console.log('[HealthDataTracker] Permissions requested, granted:', granted);
+      if (granted && !cancelled) {
+        // Brief pause so iOS has time to persist the user's permission choices
+        await new Promise((r) => setTimeout(r, 1500));
+        if (!cancelled) runDailySync();
       }
     })();
+
+    return () => { cancelled = true; };
   }, [user]);
 
   // Re-sync when app returns to foreground (still gated by "already synced today" check)
