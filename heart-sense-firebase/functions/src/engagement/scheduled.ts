@@ -278,9 +278,11 @@ export const monthlyStatsReset = onSchedule(
 
 /**
  * Scheduled: Health Data Sync Check (runs once daily at 10 AM)
- * Alerts users if their Apple Watch/Health data hasn't synced in over 24 hours
- * Since health data syncs once per day on app launch, this checks if
- * the daily sync was missed.
+ * Alerts users if their Apple Watch/Health data hasn't synced in over 24 hours.
+ * The app syncs HealthKit data once per day on app launch/foreground,
+ * writing to the health_data collection with a recorded_at timestamp.
+ * This function queries health_data.recorded_at per user to detect
+ * missed daily syncs (threshold > 24 hours).
  */
 export const healthSyncCheck = onSchedule(
   {
@@ -293,7 +295,7 @@ export const healthSyncCheck = onSchedule(
     try {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      // Get all users with health data
+      // Get all users with profiles
       const usersSnapshot = await db.collection("profiles").get();
 
       let alertsCreated = 0;
@@ -308,10 +310,11 @@ export const healthSyncCheck = onSchedule(
         }
 
         // Get the most recent health data entry for this user
+        // App writes health_data with user_id and recorded_at (ISO string)
         const healthDataSnapshot = await db
           .collection("health_data")
-          .where("userId", "==", userId)
-          .orderBy("syncedAt", "desc")
+          .where("user_id", "==", userId)
+          .orderBy("recorded_at", "desc")
           .limit(1)
           .get();
 
@@ -320,12 +323,13 @@ export const healthSyncCheck = onSchedule(
           continue;
         }
 
-        const lastSync = healthDataSnapshot.docs[0].data();
-        const lastSyncTime = lastSync.syncedAt?.toDate?.() ||
-          new Date(lastSync.syncedAt);
+        const lastEntry = healthDataSnapshot.docs[0].data();
+        // recorded_at is stored as an ISO string
+        const lastRecordedTime = lastEntry.recorded_at?.toDate?.() ||
+          new Date(lastEntry.recorded_at);
 
-        // Check if last sync was more than 24 hours ago
-        if (lastSyncTime < oneDayAgo) {
+        // Check if last recorded data is more than 24 hours ago
+        if (lastRecordedTime < oneDayAgo) {
           // Check if we already sent a sync alert today
           const todayStart = new Date(getTodayDateString() + "T00:00:00");
           const recentAlert = await db
@@ -343,7 +347,7 @@ export const healthSyncCheck = onSchedule(
 
           // Calculate days since last sync
           const daysSinceSync = Math.floor(
-            (Date.now() - lastSyncTime.getTime()) / (24 * 60 * 60 * 1000)
+            (Date.now() - lastRecordedTime.getTime()) / (24 * 60 * 60 * 1000)
           );
 
           // Create sync reminder alert
@@ -354,7 +358,7 @@ export const healthSyncCheck = onSchedule(
             `Your Apple Watch/Health data hasn't synced in ${daysSinceSync} day${daysSinceSync > 1 ? "s" : ""}. ` +
             "Open the app to sync your latest health metrics.",
             "medium",
-            {type: "sync_reminder", daysSinceSync, lastSyncTime: lastSyncTime.toISOString()},
+            {type: "sync_reminder", daysSinceSync, lastRecordedAt: lastRecordedTime.toISOString()},
             24 // Expires in 24 hours
           );
 
