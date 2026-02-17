@@ -24,6 +24,9 @@ export default function Signup() {
   const { signUp } = useAuth();
   const router = useRouter();
 
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [info, setInfo] = useState('');
+
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
@@ -45,11 +48,39 @@ export default function Signup() {
 
     try {
       await signUp(email, password, fullName);
-      router.replace('/');
+      setVerificationSent(true);
+      setInfo('Verification email sent. Please check your inbox.');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setInfo('');
+    setError('');
+    try {
+      // call via context
+      await (useAuth() as any).resendVerification();
+      setInfo('Verification email re-sent. Check your inbox.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification');
+    }
+  };
+
+  const handleRefreshCheck = async () => {
+    setInfo('');
+    setError('');
+    try {
+      const u = await (useAuth() as any).refreshUser();
+      if (u?.emailVerified) {
+        router.replace('/');
+      } else {
+        setInfo('Email not verified yet. Check your inbox or resend.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to refresh user');
     }
   };
 
@@ -72,73 +103,107 @@ export default function Signup() {
 
         <View style={styles.form}>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {info ? <Text style={styles.infoText}>{info}</Text> : null}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Enter your full name"
-              autoCapitalize="words"
-            />
-          </View>
+          {!verificationSent ? (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Enter your full name"
+                  autoCapitalize="words"
+                />
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Create a password"
-              secureTextEntry
-              autoComplete="password-new"
-            />
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Create a password"
+                  secureTextEntry
+                  autoComplete="password-new"
+                />
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirm your password"
-              secureTextEntry
-              autoComplete="password-new"
-            />
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm your password"
+                  secureTextEntry
+                  autoComplete="password-new"
+                />
+              </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Creating account...' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSignup}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Creating account...' : 'Create Account'}
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.push('/auth/login')}
-          >
-            <Text style={styles.linkText}>
-              Already have an account? Sign in
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={() => router.push('/auth/login')}
+              >
+                <Text style={styles.linkText}>
+                  Already have an account? Sign in
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.verifyTitle}>Verify your email</Text>
+              <Text style={styles.verifyText}>
+                We sent a verification link to the email you provided. Please
+                open that link to verify your account.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.button, styles.resendButton]}
+                onPress={handleResend}
+              >
+                <Text style={styles.buttonText}>Resend verification email</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.refreshButton]}
+                onPress={handleRefreshCheck}
+              >
+                <Text style={styles.buttonText}>I verified — refresh</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={() => router.push('/auth/login')}
+              >
+                <Text style={styles.linkText}>Back to sign in</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -231,5 +296,33 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fee',
     borderRadius: 8,
+  },
+  infoText: {
+    color: '#064e3b',
+    fontSize: 14,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#ecfdf5',
+    borderRadius: 8,
+  },
+  verifyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  verifyText: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  resendButton: {
+    backgroundColor: '#2563eb',
+    marginTop: 8,
+  },
+  refreshButton: {
+    backgroundColor: '#10b981',
+    marginTop: 12,
   },
 });

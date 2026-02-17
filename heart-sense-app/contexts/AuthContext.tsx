@@ -5,13 +5,15 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { signup as fbSignup, login as fbLogin } from '@/lib/auth';
+import { signup as fbSignup, login as fbLogin, resendVerification as fbResendVerification, reloadUser as fbReloadUser } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
+  refreshUser: () => Promise<import('firebase/auth').User | null>;
   signOut: () => Promise<void>;
 }
 
@@ -48,6 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await firebaseSignOut(auth);
   };
 
+  const resendVerification = async () => {
+    await fbResendVerification();
+  };
+
+  const refreshUser = async () => {
+    return fbReloadUser();
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -55,6 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signUp,
         signIn,
+        resendVerification,
+        refreshUser,
         signOut,
       }}
     >
