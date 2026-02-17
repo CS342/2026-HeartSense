@@ -2,8 +2,54 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    // Users can read/write their own profile
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users can read/write their own preferences
+    match /user_preferences/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users can read/write their own data collections
+    match /symptoms/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /activities/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /well_being_ratings/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /medical_conditions/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /health_data/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Engagement stats and alerts
+    match /engagement_stats/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null;
+    }
+
+    match /engagement_alerts/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /milestones/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Messages
+    match /myhealth_messages/{docId} {
+      allow read, write: if request.auth != null;
     }
   }
 }
