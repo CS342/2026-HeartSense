@@ -23,7 +23,6 @@ export async function signup(email: string, password: string, fullName: string) 
   // Create notification preferences too
   await setDoc(doc(db, "user_preferences", user.uid), {
     notify_daily_reminder: true,
-    notify_messages: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
     created_at: serverTimestamp(),

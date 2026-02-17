@@ -171,11 +171,16 @@ export const countSymptomsSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'symptoms'),
       where('userId', '==', userId),
-      where('occurredAt', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
-
-    const querySnapshot = await getDocs(q);
-    return { count: querySnapshot.size, error: null };
+    const snapshot = await getDocs(q);
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurredAt;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -186,11 +191,16 @@ export const countActivitiesSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'activities'),
       where('userId', '==', userId),
-      where('occurredAt', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
-
-    const querySnapshot = await getDocs(q);
-    return { count: querySnapshot.size, error: null };
+    const snapshot = await getDocs(q);
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurredAt;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -214,10 +224,16 @@ export const countWellbeingRatingsSince = async (userId: string, since: Date) =>
     const q = query(
       collection(db, 'well_being_ratings'),
       where('user_id', '==', userId),
-      where('recorded_at', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
     const snapshot = await getDocs(q);
-    return { count: snapshot.size, error: null };
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().recorded_at;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -241,10 +257,16 @@ export const countMedicalChangesSince = async (userId: string, since: Date) => {
     const q = query(
       collection(db, 'medical_conditions'),
       where('user_id', '==', userId),
-      where('occurred_at', '>=', Timestamp.fromDate(since))
+      limit(500)
     );
     const snapshot = await getDocs(q);
-    return { count: snapshot.size, error: null };
+    const sinceTime = since.getTime();
+    const count = snapshot.docs.filter((d) => {
+      const at = d.data().occurred_at;
+      const t = at?.toDate ? at.toDate().getTime() : new Date(at).getTime();
+      return t >= sinceTime;
+    }).length;
+    return { count, error: null };
   } catch (error: any) {
     return { count: 0, error: error.message };
   }
@@ -318,6 +340,61 @@ export const getWellbeingRatings = async (userId: string, limitCount: number = 5
   } catch (error: any) {
     return { data: null, error: error.message };
   }
+};
+
+export const getTodayWellbeingRatings = async (userId: string) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      where('recorded_at', '>=', Timestamp.fromDate(today)),
+      orderBy('recorded_at', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const ratings = querySnapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        userId: data.user_id,
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        notes: data.notes ?? '',
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at ? data.recorded_at.toDate().toISOString() : null,
+      };
+    });
+
+    return { data: ratings, error: null };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
+export const calculateWellbeingAverage = (ratings: WellbeingRating[]) => {
+  if (ratings.length === 0) {
+    return null;
+  }
+
+  const sum = ratings.reduce(
+    (acc, rating) => ({
+      energyLevel: acc.energyLevel + rating.energyLevel,
+      moodRating: acc.moodRating + rating.moodRating,
+      stressLevel: acc.stressLevel + rating.stressLevel,
+    }),
+    { energyLevel: 0, moodRating: 0, stressLevel: 0 }
+  );
+
+  const count = ratings.length;
+
+  return {
+    energyLevel: Math.round((sum.energyLevel / count) * 10) / 10,
+    moodRating: Math.round((sum.moodRating / count) * 10) / 10,
+    stressLevel: Math.round((sum.stressLevel / count) * 10) / 10,
+  };
 };
 
 export const logWellbeingRating = async (data: WellbeingRating) => {

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Home, Plus, Clock, User, MessageSquare } from 'lucide-react-native';
+import { Home, Plus, Clock, User } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
 export default function TabLayout() {
@@ -28,15 +28,6 @@ export default function TabLayout() {
           title: 'Home',
           tabBarIcon: ({ size, color }) => (
             <Home size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messages',
-          tabBarIcon: ({ size, color }) => (
-            <MessageSquare size={size} color={color} />
           ),
         }}
       />

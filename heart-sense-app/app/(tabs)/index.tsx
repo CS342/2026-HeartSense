@@ -18,6 +18,8 @@ import {
   getSymptoms,
   getActivities,
   getWellbeingRatings,
+  getTodayWellbeingRatings,
+  calculateWellbeingAverage,
 } from '@/lib/symptomService';
 import {
   Heart,
@@ -111,19 +113,15 @@ export default function HomeScreen() {
         countActivitiesSince(user.uid, weekAgo),
         countWellbeingRatingsSince(user.uid, weekAgo),
         countMedicalChangesSince(user.uid, weekAgo),
-        getWellbeingRatings(user.uid, 1),
+        getTodayWellbeingRatings(user.uid),
       ]);
 
-      const rating = wellbeingRes.data?.[0];
-      setLatestWellbeing(
-        rating
-          ? {
-            energyLevel: rating.energyLevel,
-            moodRating: rating.moodRating,
-            stressLevel: rating.stressLevel,
-          }
-          : null
-      );
+      if (wellbeingRes.data && wellbeingRes.data.length > 0) {
+        const averaged = calculateWellbeingAverage(wellbeingRes.data);
+        setLatestWellbeing(averaged);
+      } else {
+        setLatestWellbeing(null);
+      }
 
       const todayTotal =
         todaySymptomsRes.count +
@@ -222,43 +220,38 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+        <View style={styles.wellbeingRowContainer}>
+          {latestWellbeing ? (
+            <>
+              <View style={styles.wellbeingPill}>
+                <Zap color={theme.primary} size={20} />
+                <Text style={styles.wellbeingPillLabel}>Energy</Text>
+                <Text style={styles.wellbeingPillValue}>{latestWellbeing.energyLevel.toFixed(1)}</Text>
+              </View>
+              <View style={styles.wellbeingPill}>
+                <PersonStanding color={theme.primary} size={20} />
+                <Text style={styles.wellbeingPillLabel}>Mood</Text>
+                <Text style={styles.wellbeingPillValue}>{latestWellbeing.moodRating.toFixed(1)}</Text>
+              </View>
+              <View style={styles.wellbeingPill}>
+                <Wind color={theme.primary} size={20} />
+                <Text style={styles.wellbeingPillLabel}>Stress</Text>
+                <Text style={styles.wellbeingPillValue}>{latestWellbeing.stressLevel.toFixed(1)}</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.wellbeingEmptyCard}>
+              <Text style={styles.wellbeingEmpty}>No rating yet</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCardHalf}>
             <Text style={styles.statLabel}>Today's Entries</Text>
             <Text style={styles.statValue}>{stats.todayEntries}</Text>
           </View>
-          <View style={[styles.statCard, styles.wellbeingCard]}>
-            {/* <Text style={styles.statLabel}>Well-being</Text> */}
-            {latestWellbeing ? (
-              <>
-                <View style={styles.wellbeingRow}>
-                  <View style={styles.labelRow}>
-                    <Zap color={theme.primary} size={20} />
-                    <Text style={styles.label}>Energy</Text>
-                  </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.energyLevel}</Text>
-                </View>
-                <View style={styles.wellbeingRow}>
-                  <View style={styles.labelRow}>
-                    <Wind color={theme.primary} size={20} />
-                    <Text style={styles.label}>Stress</Text>
-                  </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.stressLevel}</Text>
-                </View>
-                <View style={styles.wellbeingRow}>
-                  <View style={styles.labelRow}>
-                    <PersonStanding color={theme.primary} size={20} />
-                    <Text style={styles.label}>Mood</Text>
-                  </View>
-                  <Text style={styles.wellbeingRowValue}>{latestWellbeing.moodRating}</Text>
-                </View>
-
-              </>
-            ) : (
-              <Text style={styles.wellbeingEmpty}>No rating yet</Text>
-            )}
-          </View>
-          <View style={styles.statCard}>
+          <View style={styles.statCardHalf}>
             <Text style={styles.statLabel}>This Week</Text>
             <Text style={styles.statValue}>{stats.weeklyEntries}</Text>
           </View>
@@ -381,12 +374,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  statsContainer: {
+  wellbeingRowContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 12,
+  },
+  wellbeingPill: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    alignItems: 'center',
+  },
+  wellbeingPillLabel: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 4,
+  },
+  wellbeingPillValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginTop: 2,
+  },
+  wellbeingEmptyCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wellbeingEmpty: {
+    fontSize: 13,
+    color: '#999',
+  },
+  statsRow: {
     flexDirection: 'row',
     padding: 16,
     gap: 12,
   },
-  statCard: {
+  statCardHalf: {
     flex: 1,
     backgroundColor: '#fff',
     padding: 16,
@@ -403,39 +436,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#1a1a1a',
-  },
-  wellbeingCard: {
-    justifyContent: 'flex-start',
-  },
-  wellbeingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  wellbeingRowLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  wellbeingRowValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  wellbeingEmpty: {
-    fontSize: 13,
-    color: '#999',
-    marginTop: 4,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    marginBottom: 4,
-  },
-  label: {
-    fontSize: 12,
-    color: '#666',
   },
   section: {
     padding: 16,
