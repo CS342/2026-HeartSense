@@ -189,20 +189,20 @@ export const testHealthSyncAlert = onRequest(async (req, res) => {
     // Create a test health sync alert
     const now = Timestamp.now();
     const expiresAt = Timestamp.fromDate(
-      new Date(Date.now() + 4 * 60 * 60 * 1000) // 4 hours
+      new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
     );
 
     const alertRef = await db.collection("engagement_alerts").add({
       userId,
       alertType: "health_insight",
       title: "Health Data Sync Reminder",
-      message: "Your Apple Watch/Health data hasn't synced in over an hour. Open the app to sync your latest health metrics.",
+      message: "Your Apple Watch/Health data hasn't synced in 1 day. Open the app to sync your latest health metrics.",
       priority: "medium",
       isRead: false,
       isDismissed: false,
       createdAt: now,
       expiresAt,
-      metadata: {type: "sync_reminder", hoursSinceSync: 1, test: true},
+      metadata: {type: "sync_reminder", daysSinceSync: 1, test: true},
     });
 
     res.json({

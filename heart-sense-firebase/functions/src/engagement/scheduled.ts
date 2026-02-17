@@ -277,19 +277,21 @@ export const monthlyStatsReset = onSchedule(
 );
 
 /**
- * Scheduled: Health Data Sync Check (runs every hour)
- * Alerts users if their Apple Watch/Health data hasn't synced in over an hour
+ * Scheduled: Health Data Sync Check (runs once daily at 10 AM)
+ * Alerts users if their Apple Watch/Health data hasn't synced in over 24 hours
+ * Since health data syncs once per day on app launch, this checks if
+ * the daily sync was missed.
  */
 export const healthSyncCheck = onSchedule(
   {
-    schedule: "0 * * * *", // Every hour at minute 0
+    schedule: "0 10 * * *", // Every day at 10 AM
     timeZone: "America/Los_Angeles",
   },
   async () => {
-    logger.info("Running health data sync check");
+    logger.info("Running daily health data sync check");
 
     try {
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
       // Get all users with health data
       const usersSnapshot = await db.collection("profiles").get();
@@ -322,26 +324,26 @@ export const healthSyncCheck = onSchedule(
         const lastSyncTime = lastSync.syncedAt?.toDate?.() ||
           new Date(lastSync.syncedAt);
 
-        // Check if last sync was more than an hour ago
-        if (lastSyncTime < oneHourAgo) {
-          // Check if we already sent a sync alert recently (within 2 hours)
-          const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        // Check if last sync was more than 24 hours ago
+        if (lastSyncTime < oneDayAgo) {
+          // Check if we already sent a sync alert today
+          const todayStart = new Date(getTodayDateString() + "T00:00:00");
           const recentAlert = await db
             .collection("engagement_alerts")
             .where("userId", "==", userId)
             .where("alertType", "==", "health_insight")
             .where("metadata.type", "==", "sync_reminder")
-            .where("createdAt", ">=", Timestamp.fromDate(twoHoursAgo))
+            .where("createdAt", ">=", Timestamp.fromDate(todayStart))
             .limit(1)
             .get();
 
           if (!recentAlert.empty) {
-            continue; // Already alerted recently
+            continue; // Already alerted today
           }
 
-          // Calculate hours since last sync
-          const hoursSinceSync = Math.floor(
-            (Date.now() - lastSyncTime.getTime()) / (60 * 60 * 1000)
+          // Calculate days since last sync
+          const daysSinceSync = Math.floor(
+            (Date.now() - lastSyncTime.getTime()) / (24 * 60 * 60 * 1000)
           );
 
           // Create sync reminder alert
@@ -349,18 +351,18 @@ export const healthSyncCheck = onSchedule(
             userId,
             "health_insight",
             "Health Data Sync Reminder",
-            `Your Apple Watch/Health data hasn't synced in ${hoursSinceSync} hour${hoursSinceSync > 1 ? "s" : ""}. ` +
+            `Your Apple Watch/Health data hasn't synced in ${daysSinceSync} day${daysSinceSync > 1 ? "s" : ""}. ` +
             "Open the app to sync your latest health metrics.",
             "medium",
-            {type: "sync_reminder", hoursSinceSync, lastSyncTime: lastSyncTime.toISOString()},
-            4 // Expires in 4 hours
+            {type: "sync_reminder", daysSinceSync, lastSyncTime: lastSyncTime.toISOString()},
+            24 // Expires in 24 hours
           );
 
           alertsCreated++;
         }
       }
 
-      logger.info(`Health sync check complete. Created ${alertsCreated} alerts.`);
+      logger.info(`Daily health sync check complete. Created ${alertsCreated} alerts.`);
     } catch (error) {
       logger.error(`Error in health sync check: ${error}`);
     }
