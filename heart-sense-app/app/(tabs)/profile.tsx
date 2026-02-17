@@ -73,7 +73,6 @@ interface AccountStats {
 
 interface NotificationPreferences {
   notify_daily_reminder: boolean;
-  notify_messages: boolean;
   notify_health_insights: boolean;
   notify_activity_milestones: boolean;
 }
@@ -123,7 +122,6 @@ export default function ProfileScreen() {
 
   const [notifications, setNotifications] = useState<NotificationPreferences>({
     notify_daily_reminder: true,
-    notify_messages: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
   });
@@ -244,7 +242,6 @@ export default function ProfileScreen() {
         const data: any = snap.data();
         setNotifications({
           notify_daily_reminder: !!data.notify_daily_reminder,
-          notify_messages: !!data.notify_messages,
           notify_health_insights: !!data.notify_health_insights,
           notify_activity_milestones: !!data.notify_activity_milestones,
         });
@@ -252,7 +249,6 @@ export default function ProfileScreen() {
         // create defaults
         const defaults: NotificationPreferences = {
           notify_daily_reminder: true,
-          notify_messages: true,
           notify_health_insights: true,
           notify_activity_milestones: true,
         };
@@ -405,13 +401,13 @@ export default function ProfileScreen() {
   const DATA_PRIVACY_CONTENT =
     "How your data is shared:\n\n" +
     "• Your profile information, health logs (symptoms, activities, wellbeing ratings), and wearable data are stored securely.\n\n" +
-    "• This data is accessible to the research team for the purposes of the clinical study.\n\n" +
+    "• This data is accessible to the Heart Sense research team for the purposes of the clinical study.\n\n" +
     "• The research team uses your data solely for study analysis and does not share it with third parties for marketing or commercial purposes.";
 
   const TERMS_CONTENT =
     "If you have any concerns about your participation, data, or the study:\n\n" +
     "• Please contact the research team directly. They handle all participant inquiries and concerns.\n\n" +
-    "• By participating, you have consented to: logging wellbeing daily, sharing your logged data (symptoms, activities, wellbeing ratings), and sharing Apple Watch data (heart rate, accelerometer, step count).\n\n" +
+    "• By participating, you have consented to: logging wellbeing daily, sharing your logged data (symptoms, activities, wellbeing ratings), and sharing Apple Watch data (heart rate, accelerometer, step count) if you opted in.\n\n" +
     "• The research team will address any questions about what you have consented to.";
 
   const APPLE_WATCH_CONTENT =
@@ -420,7 +416,7 @@ export default function ProfileScreen() {
     "• Heart rate\n" +
     "• Accelerometer data\n" +
     "• Step count\n\n" +
-    "This data is shared with the research team for the clinical study.";
+    "This data is shared with the research team for the Heart Sense clinical study.";
 
   const handleSignOut = async () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -801,25 +797,6 @@ export default function ProfileScreen() {
               trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
               thumbColor={
                 notifications.notify_daily_reminder ? theme.primary : "#f4f3f4"
-              }
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>New Messages</Text>
-              <Text style={styles.settingDescription}>
-                Notifications when you receive messages from providers
-              </Text>
-            </View>
-            <Switch
-              value={notifications.notify_messages}
-              onValueChange={(value) =>
-                updateNotificationPreference("notify_messages", value)
-              }
-              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
-              thumbColor={
-                notifications.notify_messages ? theme.primary : "#f4f3f4"
               }
             />
           </View>

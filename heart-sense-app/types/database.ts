@@ -49,29 +49,16 @@ export interface MedicalCondition {
 export interface HealthData {
   id: string;
   user_id: string;
-  data_type: 'heart_rate' | 'step_count' | 'accelerometer';
+  data_type: 'heartRate' | 'restingHeartRate' | 'heartRateVariability' | 'respiratoryRate' | 'stepCount' | 'heart_rate' | 'step_count' | 'accelerometer';
   value: number;
   unit: string;
   recorded_at: string;
   created_at: string;
 }
 
-export interface MyHealthMessage {
-  id: string;
-  user_id: string;
-  subject: string;
-  message_body: string;
-  sender_name: string;
-  sender_type: string;
-  read: boolean;
-  received_at: string;
-  created_at: string;
-}
-
 export interface UserPreferences {
   user_id: string;
   notify_daily_reminder: boolean;
-  notify_messages: boolean;
   notify_health_insights: boolean;
   notify_activity_milestones: boolean;
   created_at: string;

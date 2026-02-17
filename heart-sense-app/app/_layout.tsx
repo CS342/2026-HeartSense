@@ -7,6 +7,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { NotificationBanner } from '@/components/NotificationBanner';
+import { HealthDataTracker } from '@/components/HealthDataTracker';
 
 // Show notifications even when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -41,6 +42,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <OnboardingProvider>
+        <HealthDataTracker />
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -48,6 +50,11 @@ export default function RootLayout() {
             <Stack.Screen name="auth/signup" />
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="screens/symptom-entry" />
+            <Stack.Screen name="screens/wellbeing-rating" />
+            <Stack.Screen name="screens/activity-entry" />
+            <Stack.Screen name="screens/medical-condition" />
+            <Stack.Screen name="screens/help" />
             <Stack.Screen name="+not-found" />
           </Stack>
           <NotificationBanner

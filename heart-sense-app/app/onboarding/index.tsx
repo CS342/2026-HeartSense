@@ -14,12 +14,13 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { Heart, ClipboardList, Watch, Calendar, User, ArrowLeft, Ruler, Scale } from 'lucide-react-native';
-
-const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'] as const;
+import { Heart, ClipboardList, Watch, Calendar, User, ChevronRight, Ruler, Scale } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+
+const GENDER_OPTIONS = ['Male', 'Female', 'Other', 'Prefer not to say'] as const;
+
 
 function parseLocalDate(isoDateStr: string): Date | null {
   if (!isoDateStr) return null;
@@ -34,7 +35,6 @@ export default function OnboardingScreen() {
   const { user } = useAuth();
   const { refetch } = useOnboarding();
   const router = useRouter();
-  const [step, setStep] = useState(1);
   const [appleWatchConsent, setAppleWatchConsent] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
   const [showDobPicker, setShowDobPicker] = useState(false);
@@ -43,6 +43,7 @@ export default function OnboardingScreen() {
   const [weightKg, setWeightKg] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState<1 | 2>(1);
 
   const defaultDobDate = (() => {
     const d = new Date();
@@ -61,13 +62,13 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleNext = () => {
+  const handleNextPage = () => {
     if (!appleWatchConsent) {
       setError('Please consent to sharing Apple Watch data (heart rate, accelerometer, step count) to participate in the study.');
       return;
     }
     setError('');
-    setStep(step + 1);
+    setPage(2);
   };
 
   const handleComplete = async () => {
@@ -104,7 +105,9 @@ export default function OnboardingScreen() {
         height_cm: heightNum,
         weight_kg: weightNum,
         apple_watch_consent: true,
+        apple_watch_consent_at: serverTimestamp(),
         onboarding_completed: true,
+        onboarding_completed_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
 
@@ -124,16 +127,20 @@ export default function OnboardingScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {step === 1 && (
-          <>
-            <View style={styles.header}>
-              <View style={styles.iconContainer}>
-                <Heart color={theme.primary} size={48} strokeWidth={2} />
-              </View>
-              <Text style={styles.title}>Welcome to Heart Sense</Text>
-              <Text style={styles.subtitle}>Clinical Study Setup</Text>
-            </View>
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Heart color={theme.primary} size={48} strokeWidth={2} />
+          </View>
+          <Text style={styles.title}>
+            {page === 1 ? 'Welcome to Heart Sense' : 'Personal Information'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {page === 1 ? 'Step 1 of 2' : 'Step 2 of 2'}
+          </Text>
+        </View>
 
+        {page === 1 ? (
+          <>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <ClipboardList color={theme.primary} size={24} />
@@ -179,25 +186,21 @@ export default function OnboardingScreen() {
                 />
               </View>
             </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
             <TouchableOpacity
-              style={styles.continueButton}
-              onPress={handleNext}
+              style={[styles.continueButton, !appleWatchConsent && styles.continueButtonDisabled]}
+              onPress={handleNextPage}
+              disabled={!appleWatchConsent}
             >
               <Text style={styles.continueButtonText}>Next</Text>
+              <ChevronRight color="#fff" size={24} />
             </TouchableOpacity>
           </>
-        )}
-
-        {step === 2 && (
+        ) : (
           <>
-            <View>
-              <TouchableOpacity onPress={() => setStep(1)} style={styles.backButton}>
-                <ArrowLeft color={theme.primary} size={24} strokeWidth={2} />
-              </TouchableOpacity>
-              <Text style={styles.title}>Personal Information</Text>
-            </View>
-
-            <View style={styles.section}>
+            <View style={styles.fieldSection}>
               <View style={styles.sectionHeader}>
                 <Calendar color={theme.primary} size={24} />
                 <Text style={styles.sectionTitle}>Date of Birth</Text>
@@ -206,11 +209,11 @@ export default function OnboardingScreen() {
                 Please provide your date of birth. This is required for the study.
               </Text>
               <TouchableOpacity
-                style={styles.dobButton}
+                style={styles.fieldButton}
                 onPress={() => setShowDobPicker(true)}
                 activeOpacity={0.7}
               >
-                <Text style={dateOfBirth ? styles.dobButtonText : styles.dobButtonPlaceholder}>
+                <Text style={dateOfBirth ? styles.fieldButtonText : styles.fieldButtonPlaceholder}>
                   {dateOfBirth
                     ? (parseLocalDate(dateOfBirth) ?? new Date()).toLocaleDateString('en-US', {
                       month: 'long',
@@ -246,8 +249,7 @@ export default function OnboardingScreen() {
               )}
             </View>
 
-
-            <View style={styles.section}>
+            <View style={styles.fieldSection}>
               <View style={styles.sectionHeader}>
                 <User color={theme.primary} size={24} />
                 <Text style={styles.sectionTitle}>Gender</Text>
@@ -255,7 +257,6 @@ export default function OnboardingScreen() {
               <Text style={styles.bodyText}>
                 Please select your gender.
               </Text>
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Gender</Text>
               <View style={styles.genderRow}>
                 {GENDER_OPTIONS.map((opt) => (
                   <TouchableOpacity
@@ -279,7 +280,7 @@ export default function OnboardingScreen() {
               </View>
             </View>
 
-            <View style={styles.section}>
+            <View style={styles.fieldSection}>
               <View style={styles.sectionHeader}>
                 <Ruler color={theme.primary} size={24} />
                 <Text style={styles.sectionTitle}>Height</Text>
@@ -287,7 +288,6 @@ export default function OnboardingScreen() {
               <Text style={styles.bodyText}>
                 Please enter your height in centimeters.
               </Text>
-              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Height (cm)</Text>
               <TextInput
                 style={styles.input}
                 value={heightCm}
@@ -298,8 +298,7 @@ export default function OnboardingScreen() {
               />
             </View>
 
-
-            <View style={styles.section}>
+            <View style={styles.fieldSection}>
               <View style={styles.sectionHeader}>
                 <Scale color={theme.primary} size={24} />
                 <Text style={styles.sectionTitle}>Weight</Text>
@@ -307,8 +306,6 @@ export default function OnboardingScreen() {
               <Text style={styles.bodyText}>
                 Please enter your weight in kilograms.
               </Text>
-
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Weight (kg)</Text>
               <TextInput
                 style={styles.input}
                 value={weightKg}
@@ -318,6 +315,8 @@ export default function OnboardingScreen() {
                 placeholderTextColor="#999"
               />
             </View>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <TouchableOpacity
               style={[styles.continueButton, loading && styles.buttonDisabled]}
@@ -329,13 +328,9 @@ export default function OnboardingScreen() {
               </Text>
             </TouchableOpacity>
           </>
-        )
-        }
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      </ScrollView >
-    </SafeAreaView >
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -431,7 +426,15 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginRight: 16,
   },
-  dobButton: {
+  fieldSection: {
+    marginBottom: 28,
+    padding: 20,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
+  fieldButton: {
     marginTop: 12,
     padding: 16,
     backgroundColor: '#fff',
@@ -439,12 +442,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  dobButtonText: {
+  fieldButtonText: {
     fontSize: 16,
     color: '#1a1a1a',
     fontWeight: '500',
   },
-  dobButtonPlaceholder: {
+  fieldButtonPlaceholder: {
     fontSize: 16,
     color: '#999',
   },
@@ -506,22 +509,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   continueButton: {
+    flexDirection: 'row',
     height: 52,
     backgroundColor: theme.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
+    gap: 8,
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#9ca3af',
+    opacity: 0.7,
   },
   buttonDisabled: {
-    backgroundColor: theme.primaryLight,
+    backgroundColor: '#99c2e6',
   },
   continueButtonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
-  },
-  backButton: {
-    padding: 4,
   },
 });

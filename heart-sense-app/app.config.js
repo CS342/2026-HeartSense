@@ -10,7 +10,11 @@ export default {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.heartsense.app"
+      bundleIdentifier: "com.heartsense.app",
+      infoPlist: {
+        NSHealthShareUsageDescription: "Heart Sense reads your Apple Health data (heart rate, steps, respiratory rate) to provide personalized cardiac health insights for your care team.",
+        NSHealthUpdateUsageDescription: "Heart Sense may save health summaries to Apple Health to keep your records in sync.",
+      },
     },
     android: {
       package: "com.heartsense.app",
@@ -35,6 +39,14 @@ export default {
           color: "#1a1a1a",
           sounds: []
         }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          NSHealthShareUsageDescription: "Heart Sense reads your Apple Health data (heart rate, steps, respiratory rate) to provide personalized cardiac health insights for your care team.",
+          NSHealthUpdateUsageDescription: "Heart Sense may save health summaries to Apple Health to keep your records in sync.",
+          background: false,
+        }
       ]
     ],
     experiments: {
@@ -43,9 +55,7 @@ export default {
     updates: {
       url: "https://u.expo.dev/4171cdf0-600d-4f1f-8fbd-209ec90d4982",
     },
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    runtimeVersion: "1.0.0",
     extra: {
       // EAS project ID (links this app to EAS / expo.dev). Override with EXPO_PUBLIC_EAS_PROJECT_ID in .env if needed.
       projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "4171cdf0-600d-4f1f-8fbd-209ec90d4982",
