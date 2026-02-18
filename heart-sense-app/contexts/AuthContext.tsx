@@ -35,15 +35,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Set up notification listeners
   useEffect(() => {
-    // Request notification permissions
     registerForPushNotificationsAsync();
 
-    // Listen for notifications when app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification);
     });
 
-    // Listen for notification taps
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const screen = response.notification.request.content.data?.screen;
       if (screen === ELEVATED_HR_NOTIFICATION_SCREEN) {
