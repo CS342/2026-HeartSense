@@ -4,14 +4,17 @@
  * Mount this once inside a provider that supplies AuthContext.
  * It requests HealthKit permissions on mount and triggers a once-daily
  * bulk sync of the last 24 hours of health data to Firestore.
+ * When app is active, it also checks latest heart rate and may show an
+ * elevated-heart-rate notification prompting the user to log a symptom.
  *
  * Renders nothing — pure side-effect component.
  */
 import { useEffect, useRef } from 'react';
 import { Platform, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { checkAvailability, requestHealthPermissions } from '@/services/healthkit';
+import { checkAvailability, requestHealthPermissions, getLatestVitals } from '@/services/healthkit';
 import { performDailySync } from '@/services/healthkit/healthSyncService';
+import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
 
 export function HealthDataTracker() {
   const { user } = useAuth();
@@ -23,6 +26,11 @@ export function HealthDataTracker() {
     isSyncing.current = true;
     try {
       await performDailySync(user.uid);
+      // After sync (or when coming to foreground), check latest heart rate and notify if elevated
+      if (checkAvailability()) {
+        const vitals = await getLatestVitals();
+        await checkAndNotifyIfElevated(user.uid, vitals);
+      }
     } catch (err) {
       if (__DEV__) console.warn('[HealthDataTracker] Daily sync error:', err);
     } finally {
@@ -51,7 +59,7 @@ export function HealthDataTracker() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Re-sync when app returns to foreground (still gated by "already synced today" check)
+  // Re-sync when app returns to foreground (runDailySync also runs elevated HR check)
   useEffect(() => {
     if (Platform.OS !== 'ios' || !user) return;
 
