@@ -38,6 +38,20 @@ export function HealthDataTracker() {
 
       if (__DEV__ && vitalsOrTimeout === null) {
         console.log('[HealthDataTracker] DEV: getLatestVitals timed out — HealthKit native call hung');
+      // After sync (or when coming to foreground), check latest heart rate and notify if elevated
+      if (checkAvailability()) {
+        let vitals = await getLatestVitals();
+        if (__DEV__ && !vitals.heartRate) {
+          // No Apple Watch / simulator — inject a fake reading so the
+          // notification path can be exercised end-to-end in development.
+          console.log('[HealthDataTracker] DEV: no HR sample from HealthKit, injecting 120 bpm stub');
+          vitals = {
+            ...vitals,
+            heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
+          };
+        }
+        console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
+        await checkAndNotifyIfElevated(user.uid, vitals);
       }
 
       let vitals = vitalsOrTimeout ?? {
