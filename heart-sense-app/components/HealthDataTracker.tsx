@@ -24,11 +24,29 @@ export function HealthDataTracker() {
     isSyncing.current = true;
     try {
       await performDailySync(user.uid);
-      let vitals = await getLatestVitals();
+      if (__DEV__) console.log('[HealthDataTracker] Sync done, fetching latest vitals…');
+
+      // getLatestVitals calls into HealthKit native code which can hang
+      // indefinitely on the simulator — race it against a 5-second timeout
+      // so a stalled HealthKit query never blocks the notification check.
+      const vitalsOrTimeout = await Promise.race([
+        getLatestVitals(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
+
+      if (__DEV__ && vitalsOrTimeout === null) {
+        console.log('[HealthDataTracker] DEV: getLatestVitals timed out — HealthKit native call hung');
+      }
+
+      let vitals = vitalsOrTimeout ?? {
+        heartRate: null, restingHeartRate: null, hrv: null,
+        respiratoryRate: null, steps: null, lastUpdated: null,
+      };
+
       if (__DEV__ && !vitals.heartRate) {
         // No Apple Watch / simulator — inject a fake reading so the
         // notification path can be exercised end-to-end in development.
-        console.log('[HealthDataTracker] DEV: no HR sample from HealthKit, injecting 120 bpm stub');
+        console.log('[HealthDataTracker] DEV: no HR sample — injecting 120 bpm stub');
         vitals = {
           ...vitals,
           heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
