@@ -10,8 +10,9 @@
 import { useEffect, useRef } from 'react';
 import { Platform, AppState } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { checkAvailability, requestHealthPermissions } from '@/services/healthkit';
+import { checkAvailability, requestHealthPermissions, getLatestVitals } from '@/services/healthkit';
 import { performDailySync } from '@/services/healthkit/healthSyncService';
+import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
 
 export function HealthDataTracker() {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ export function HealthDataTracker() {
     isSyncing.current = true;
     try {
       await performDailySync(user.uid);
+      const vitals = await getLatestVitals();
+      await checkAndNotifyIfElevated(user.uid, vitals);
     } catch (err) {
       if (__DEV__) console.warn('[HealthDataTracker] Daily sync error:', err);
     } finally {
