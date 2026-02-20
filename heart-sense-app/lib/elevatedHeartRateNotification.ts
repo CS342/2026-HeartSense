@@ -25,14 +25,11 @@ export async function getElevatedHrPrefs(userId: string): Promise<ElevatedHrPref
     const snap = await getDoc(ref);
     const data = snap.exists() ? snap.data() : undefined;
     return {
-      elevated_heart_rate_threshold_bpm: 50,
-    }
-    // return {
-    //   elevated_heart_rate_threshold_bpm:
-    //     typeof data?.elevated_heart_rate_threshold_bpm === 'number'
-    //       ? data.elevated_heart_rate_threshold_bpm
-    //       : DEFAULT_THRESHOLD_BPM,
-    // };
+      elevated_heart_rate_threshold_bpm:
+        typeof data?.elevated_heart_rate_threshold_bpm === 'number'
+          ? data.elevated_heart_rate_threshold_bpm
+          : DEFAULT_THRESHOLD_BPM,
+    };
   } catch {
     // network error or permission denied — fall through to default
   }

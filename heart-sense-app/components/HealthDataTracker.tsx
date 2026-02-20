@@ -43,15 +43,17 @@ export function HealthDataTracker() {
         respiratoryRate: null, steps: null, lastUpdated: null,
       };
 
-      if (__DEV__ && !vitals.heartRate) {
-        // No Apple Watch / simulator — inject a fake reading so the
-        // notification path can be exercised end-to-end in development.
-        console.log('[HealthDataTracker] DEV: no HR sample — injecting 120 bpm stub');
-        vitals = {
-          ...vitals,
-          heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
-        };
-      }
+      /* For in-class demo, inject a fake reading so the 
+      notification path can be exercised end-to-end in development. */
+      // if (__DEV__ && !vitals.heartRate) {
+      //   // No Apple Watch / simulator — inject a fake reading so the
+      //   // notification path can be exercised end-to-end in development.
+      //   console.log('[HealthDataTracker] DEV: no HR sample — injecting 120 bpm stub');
+      //   vitals = {
+      //     ...vitals,
+      //     heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
+      //   };
+      // }
       console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
       await checkAndNotifyIfElevated(user.uid, vitals);
     } catch (err) {
