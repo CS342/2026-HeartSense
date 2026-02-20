@@ -24,7 +24,17 @@ export function HealthDataTracker() {
     isSyncing.current = true;
     try {
       await performDailySync(user.uid);
-      const vitals = await getLatestVitals();
+      let vitals = await getLatestVitals();
+      if (__DEV__ && !vitals.heartRate) {
+        // No Apple Watch / simulator — inject a fake reading so the
+        // notification path can be exercised end-to-end in development.
+        console.log('[HealthDataTracker] DEV: no HR sample from HealthKit, injecting 120 bpm stub');
+        vitals = {
+          ...vitals,
+          heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
+        };
+      }
+      console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
       await checkAndNotifyIfElevated(user.uid, vitals);
     } catch (err) {
       if (__DEV__) console.warn('[HealthDataTracker] Daily sync error:', err);
