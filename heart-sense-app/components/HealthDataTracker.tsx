@@ -28,7 +28,32 @@ export function HealthDataTracker() {
       await performDailySync(user.uid);
       // After sync (or when coming to foreground), check latest heart rate and notify if elevated
       if (checkAvailability()) {
-        const vitals = await getLatestVitals();
+        if (__DEV__) console.log('[HealthDataTracker] Sync done, fetching latest vitals…');
+
+        // getLatestVitals can hang on simulator — race with 5s timeout
+        const vitalsOrTimeout = await Promise.race([
+          getLatestVitals(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+        ]);
+
+        if (__DEV__ && vitalsOrTimeout === null) {
+          console.log('[HealthDataTracker] DEV: getLatestVitals timed out — HealthKit native call hung');
+        }
+
+        let vitals = vitalsOrTimeout ?? {
+          heartRate: null, restingHeartRate: null, hrv: null,
+          respiratoryRate: null, steps: null, lastUpdated: null,
+        };
+
+        /* For in-class demo, uncomment to inject a fake HR so the notification path can be tested. */
+        // if (__DEV__ && !vitals.heartRate) {
+        //   console.log('[HealthDataTracker] DEV: no HR sample — injecting 120 bpm stub');
+        //   vitals = {
+        //     ...vitals,
+        //     heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
+        //   };
+        // }
+        console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
         await checkAndNotifyIfElevated(user.uid, vitals);
       }
     } catch (err) {
