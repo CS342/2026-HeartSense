@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, sendElevatedHeartRatePushCallable } from './firebase';
 import { showLocalNotification } from './notificationService';
 import type { LatestVitals } from '@/services/healthkit';
 
@@ -64,11 +64,24 @@ export async function checkAndNotifyIfElevated(
   }
 
   console.log('[elevatedHR] Firing notification');
+  const message = `Your heart rate is ${bpm} bpm. Would you like to log a symptom?`;
+
+  // Local notification (shows when app is in foreground)
   await showLocalNotification(
     'Elevated Heart Rate Detected',
-    `Your heart rate is ${bpm} bpm. Would you like to log a symptom?`,
+    message,
     { screen: ELEVATED_HR_NOTIFICATION_SCREEN }
   );
+
+  // Ask backend to send a push so the user gets it when app is in background or closed
+  try {
+    const { data } = await sendElevatedHeartRatePushCallable({ bpm });
+    if (!data?.success && data?.error) {
+      console.warn('[elevatedHR] Push failed:', data.error);
+    }
+  } catch (err) {
+    console.warn('[elevatedHR] Push call failed:', err);
+  }
 
   await AsyncStorage.setItem(key, String(Date.now()));
 }

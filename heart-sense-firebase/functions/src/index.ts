@@ -68,8 +68,12 @@ export {
 // ============================================
 // Push Notification Functions
 // ============================================
-// Sends push notifications via FCM or Expo Push API
-export {sendPushNotification} from "./notifications/push";
+// Sends push notifications via FCM or Expo Push API; trigger sends push when engagement alert is created
+export {
+  sendPushNotification,
+  sendElevatedHeartRatePush,
+  onEngagementAlertCreated,
+} from "./notifications/push";
 
 // ============================================
 // TEST ENDPOINTS (Remove before production)

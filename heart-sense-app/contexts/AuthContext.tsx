@@ -8,6 +8,7 @@ import {
 import { signup as fbSignup, login as fbLogin, resendVerification as fbResendVerification, reloadUser as fbReloadUser } from '@/lib/auth';
 import {
   registerForPushNotificationsAsync,
+  savePushTokenToBackend,
   subscribeToEngagementAlerts,
 } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
@@ -35,7 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Set up notification listeners
   useEffect(() => {
-    registerForPushNotificationsAsync();
+    registerForPushNotificationsAsync().then(token => {
+      if (token) console.log('Push token obtained (will save when user is set)');
+    });
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification);
@@ -58,9 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Set up Firestore alerts subscription when user logs in
+  // When user is set: save push token to backend (so they get notifications when app is closed) and subscribe to engagement alerts
   useEffect(() => {
     if (user) {
+      registerForPushNotificationsAsync().then(token => {
+        if (token) savePushTokenToBackend(user.uid, token);
+      });
       console.log('Setting up engagement alerts subscription for user:', user.uid);
       alertsUnsubscribeRef.current = subscribeToEngagementAlerts(user.uid, (alert) => {
         console.log('New engagement alert:', alert);
