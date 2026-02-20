@@ -61,6 +61,8 @@ export interface UserPreferences {
   notify_daily_reminder: boolean;
   notify_health_insights: boolean;
   notify_activity_milestones: boolean;
+  notify_elevated_heart_rate: boolean;
+  elevated_heart_rate_threshold_bpm: number;
   created_at: string;
   updated_at: string;
 }

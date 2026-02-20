@@ -75,6 +75,7 @@ interface NotificationPreferences {
   notify_daily_reminder: boolean;
   notify_health_insights: boolean;
   notify_activity_milestones: boolean;
+  elevated_heart_rate_threshold_bpm: number;
 }
 
 function toJSDate(value: any): Date | null {
@@ -124,6 +125,7 @@ export default function ProfileScreen() {
     notify_daily_reminder: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
+    elevated_heart_rate_threshold_bpm: 100,
   });
 
   const [loading, setLoading] = useState(false);
@@ -244,6 +246,10 @@ export default function ProfileScreen() {
           notify_daily_reminder: !!data.notify_daily_reminder,
           notify_health_insights: !!data.notify_health_insights,
           notify_activity_milestones: !!data.notify_activity_milestones,
+          elevated_heart_rate_threshold_bpm:
+            typeof data.elevated_heart_rate_threshold_bpm === 'number'
+              ? Math.max(60, Math.min(200, data.elevated_heart_rate_threshold_bpm))
+              : 100,
         });
       } else {
         // create defaults
@@ -251,6 +257,7 @@ export default function ProfileScreen() {
           notify_daily_reminder: true,
           notify_health_insights: true,
           notify_activity_milestones: true,
+          elevated_heart_rate_threshold_bpm: 100,
         };
 
         await setDoc(
@@ -272,7 +279,7 @@ export default function ProfileScreen() {
 
   const updateNotificationPreference = async (
     key: keyof NotificationPreferences,
-    value: boolean
+    value: boolean | number
   ) => {
     if (!user) return;
 
@@ -281,7 +288,6 @@ export default function ProfileScreen() {
     setNotifications(updatedPrefs);
 
     try {
-      // Ensure doc exists (in case user never loaded prefs)
       await setDoc(
         doc(db, "user_preferences", user.uid),
         {
@@ -295,6 +301,11 @@ export default function ProfileScreen() {
       setNotifications(prev);
       Alert.alert("Error", "Failed to update notification preference");
     }
+  };
+
+  const updateElevatedHrThreshold = async (bpm: number) => {
+    const clamped = Math.max(60, Math.min(200, bpm));
+    await updateNotificationPreference("elevated_heart_rate_threshold_bpm", clamped);
   };
 
   const loadAccountStats = async () => {
@@ -839,6 +850,28 @@ export default function ProfileScreen() {
             />
           </View>
 
+          <View style={styles.settingRow}>
+            <View style={styles.settingContent}>
+              <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+              <Text style={styles.settingDescription}>
+                You’ll be notified when an elevated heart rate is detected so you can log a symptom. Notify when at or above (bpm):
+              </Text>
+            </View>
+            <TextInput
+              style={styles.thresholdInput}
+              value={String(notifications.elevated_heart_rate_threshold_bpm)}
+              onChangeText={(t) => {
+                const n = parseInt(t.replace(/\D/g, ''), 10);
+                if (!isNaN(n)) setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: Math.max(60, Math.min(200, n)) }));
+                else if (t === '') setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: 100 }));
+              }}
+              onBlur={() => updateElevatedHrThreshold(notifications.elevated_heart_rate_threshold_bpm)}
+              keyboardType="number-pad"
+              maxLength={3}
+              placeholder="100"
+            />
+          </View>
+
           <TouchableOpacity
             style={styles.testNotificationButton}
             onPress={handleSendTestNotification}
@@ -1125,6 +1158,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   settingDescription: { fontSize: 13, color: "#666", lineHeight: 18 },
+  thresholdInput: {
+    width: 56,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    textAlign: "center",
+  },
   testNotificationButton: {
     flexDirection: "row",
     alignItems: "center",

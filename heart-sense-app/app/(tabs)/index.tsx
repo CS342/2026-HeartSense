@@ -35,6 +35,7 @@ import {
 } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 import { useHealthKit } from '@/hooks/useHealthKit';
+import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
 
 interface QuickStats {
   todayEntries: number;
@@ -76,6 +77,12 @@ export default function HomeScreen() {
       loadStats();
     }, [user])
   );
+
+  // When vitals load (e.g. from HealthKit), check for elevated heart rate and notify if enabled
+  useEffect(() => {
+    if (!user || !vitals) return;
+    checkAndNotifyIfElevated(user.uid, vitals);
+  }, [user?.uid, vitals]);
 
   const loadStats = async () => {
     if (!user) {

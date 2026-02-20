@@ -46,6 +46,8 @@ export async function signup(email: string, password: string, fullName: string) 
     notify_daily_reminder: true,
     notify_health_insights: true,
     notify_activity_milestones: true,
+    notify_elevated_heart_rate: true,
+    elevated_heart_rate_threshold_bpm: 100,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });
