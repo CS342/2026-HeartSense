@@ -16,16 +16,23 @@ function cooldownKey(userId: string) {
 export interface ElevatedHrPrefs {
   elevated_heart_rate_threshold_bpm: number;
 }
-
+/**
+ * Load elevated heart rate threshold from Firestore (users receive notifications by default).
+ */
 export async function getElevatedHrPrefs(userId: string): Promise<ElevatedHrPrefs> {
   try {
-    const snap = await getDoc(doc(db, 'user_preferences', userId));
-    if (snap.exists()) {
-      const value = snap.data()?.elevated_heart_rate_threshold_bpm;
-      if (typeof value === 'number') {
-        return { elevated_heart_rate_threshold_bpm: value };
-      }
+    const ref = doc(db, 'user_preferences', userId);
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? snap.data() : undefined;
+    return {
+      elevated_heart_rate_threshold_bpm: 50,
     }
+    // return {
+    //   elevated_heart_rate_threshold_bpm:
+    //     typeof data?.elevated_heart_rate_threshold_bpm === 'number'
+    //       ? data.elevated_heart_rate_threshold_bpm
+    //       : DEFAULT_THRESHOLD_BPM,
+    // };
   } catch {
     // network error or permission denied — fall through to default
   }
