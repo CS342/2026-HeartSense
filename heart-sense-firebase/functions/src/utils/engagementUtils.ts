@@ -172,7 +172,7 @@ export async function updateEngagementStats(
 }
 
 /**
- * Create an engagement alert for a user
+ * Create an engagement alert for a user and send push notification
  */
 export async function createEngagementAlert(
   userId: string,
