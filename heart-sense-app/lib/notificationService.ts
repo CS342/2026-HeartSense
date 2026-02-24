@@ -12,6 +12,7 @@ import {
   Timestamp,
   updateDoc,
   doc,
+  setDoc,
 } from "firebase/firestore";
 
 // Configure how notifications appear when app is in foreground
@@ -59,6 +60,23 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   return token;
+}
+
+// Save push token to Firestore for server-side notifications
+export async function savePushToken(userId: string, token: string): Promise<void> {
+  if (!token || !userId) return;
+
+  try {
+    await setDoc(doc(db, "push_tokens", userId), {
+      userId,
+      token,
+      platform: Platform.OS,
+      updatedAt: Timestamp.now(),
+    });
+    console.log("Push token saved to Firestore");
+  } catch (error) {
+    console.error("Failed to save push token:", error);
+  }
 }
 
 // Schedule a local notification immediately

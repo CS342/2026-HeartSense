@@ -5,6 +5,7 @@
 
 import * as admin from "firebase-admin";
 import {Timestamp, Transaction} from "firebase-admin/firestore";
+import * as logger from "firebase-functions/logger";
 import {
   UserEngagementStats,
   EngagementAlert,
@@ -17,6 +18,90 @@ import {
 } from "../types/engagement";
 
 const db = admin.firestore();
+const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+
+/**
+ * Check if a token is an Expo push token
+ */
+function isExpoPushToken(token: string): boolean {
+  return (
+    token.startsWith("ExponentPushToken[") ||
+    token.startsWith("ExpoPushToken[") ||
+    /^ExponentPushToken\[.+\]$/.test(token) ||
+    token.includes("ExponentPushToken")
+  );
+}
+
+/**
+ * Send a push notification to a user
+ */
+export async function sendPushNotificationToUser(
+  userId: string,
+  title: string,
+  body: string
+): Promise<boolean> {
+  try {
+    // Get user's push token from Firestore
+    const tokenDoc = await db.collection("push_tokens").doc(userId).get();
+
+    if (!tokenDoc.exists) {
+      logger.info("No push token found for user", {userId});
+      return false;
+    }
+
+    const tokenData = tokenDoc.data();
+    const token = tokenData?.token;
+
+    if (!token) {
+      logger.info("Push token is empty for user", {userId});
+      return false;
+    }
+
+    // Send via Expo or FCM
+    if (isExpoPushToken(token)) {
+      const res = await fetch(EXPO_PUSH_URL, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: token,
+          title,
+          body,
+          sound: "default",
+        }),
+      });
+
+      const data = await res.json() as {
+        data?: {status?: string; id?: string}[];
+        errors?: {message: string}[];
+      };
+
+      if (!res.ok || (data.errors && data.errors.length > 0)) {
+        logger.error("Expo push failed", {userId, error: data.errors});
+        return false;
+      }
+
+      logger.info("Push notification sent via Expo", {userId});
+      return true;
+    }
+
+    // Try FCM for non-Expo tokens
+    await admin.messaging().send({
+      token,
+      notification: {title, body},
+      android: {priority: "high"},
+      apns: {payload: {aps: {sound: "default"}}},
+    });
+
+    logger.info("Push notification sent via FCM", {userId});
+    return true;
+  } catch (error) {
+    logger.error("Failed to send push notification", {userId, error});
+    return false;
+  }
+}
 
 /**
  * Get the current date in YYYY-MM-DD format
@@ -172,7 +257,7 @@ export async function updateEngagementStats(
 }
 
 /**
- * Create an engagement alert for a user
+ * Create an engagement alert for a user and send push notification
  */
 export async function createEngagementAlert(
   userId: string,
@@ -203,6 +288,10 @@ export async function createEngagementAlert(
   }
 
   const alertRef = await db.collection("engagement_alerts").add(alert);
+
+  // Send push notification to user's device
+  await sendPushNotificationToUser(userId, title, message);
+
   return alertRef.id;
 }
 

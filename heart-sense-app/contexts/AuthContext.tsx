@@ -9,6 +9,7 @@ import { signup as fbSignup, login as fbLogin, resendVerification as fbResendVer
 import {
   registerForPushNotificationsAsync,
   subscribeToEngagementAlerts,
+  savePushToken,
 } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
 
@@ -57,12 +58,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Set up Firestore alerts subscription when user logs in
+  // Set up Firestore alerts subscription and save push token when user logs in
   useEffect(() => {
     if (user) {
       console.log('Setting up engagement alerts subscription for user:', user.uid);
       alertsUnsubscribeRef.current = subscribeToEngagementAlerts(user.uid, (alert) => {
         console.log('New engagement alert:', alert);
+      });
+
+      // Register and save push token for server-side notifications
+      registerForPushNotificationsAsync().then((token) => {
+        if (token) {
+          savePushToken(user.uid, token);
+        }
       });
     } else {
       // Clean up subscription when user logs out
