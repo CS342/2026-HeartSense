@@ -156,46 +156,73 @@ export function subscribeToEngagementAlerts(
   onAlert?: (alert: EngagementAlert) => void
 ): () => void {
   const alertsRef = collection(db, "engagement_alerts");
+
+  // Use a simpler query first to debug - without orderBy to avoid index requirements
+  // Note: The composite index is required for the full query with orderBy
   const q = query(
     alertsRef,
     where("userId", "==", userId),
     where("isRead", "==", false),
-    orderBy("createdAt", "desc"),
     limit(10)
   );
 
   console.log("Subscribing to engagement alerts for user:", userId);
+  console.log("Query filters: userId ==", userId, ", isRead == false, limit 10 (no orderBy for debugging)");
 
   const unsubscribe = onSnapshot(
     q,
     (snapshot) => {
-      console.log("Engagement alerts snapshot received, changes:", snapshot.docChanges().length);
+      console.log("Engagement alerts snapshot received:");
+      console.log("  - Total docs in snapshot:", snapshot.docs.length);
+      console.log("  - Number of changes:", snapshot.docChanges().length);
+      console.log("  - From cache:", snapshot.metadata.fromCache);
+      console.log("  - Has pending writes:", snapshot.metadata.hasPendingWrites);
+
+      // Log all docs in snapshot for debugging
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        console.log("  - Doc:", doc.id, "userId:", data.userId, "isRead:", data.isRead, "title:", data.title);
+      });
+
+      // Log all changes
+      snapshot.docChanges().forEach((change) => {
+        console.log("  - Change type:", change.type, "doc:", change.doc.id);
+      });
+
       snapshot.docChanges().forEach(async (change) => {
         if (change.type === "added") {
           const alert = change.doc.data() as EngagementAlert;
           alert.id = change.doc.id;
 
-          console.log("New engagement alert received:", alert.title);
+          console.log("Processing new engagement alert:", alert.title, "id:", alert.id);
 
-          // Show local notification
-          await showLocalNotification(alert.title, alert.message, {
-            alertId: alert.id,
-            alertType: alert.alertType,
-          });
+          try {
+            // Show local notification
+            console.log("Scheduling local notification...");
+            const notifId = await showLocalNotification(alert.title, alert.message, {
+              alertId: alert.id,
+              alertType: alert.alertType,
+            });
+            console.log("Local notification scheduled, id:", notifId);
 
-          // Mark as notified
-          await updateDoc(doc(db, "engagement_alerts", change.doc.id), {
-            notifiedAt: Timestamp.now(),
-          });
+            // Mark as notified
+            await updateDoc(doc(db, "engagement_alerts", change.doc.id), {
+              notifiedAt: Timestamp.now(),
+            });
+            console.log("Alert marked as notified");
 
-          if (onAlert) {
-            onAlert(alert);
+            if (onAlert) {
+              onAlert(alert);
+            }
+          } catch (err) {
+            console.error("Error processing engagement alert:", err);
           }
         }
       });
     },
     (error) => {
       console.error("Engagement alerts subscription error:", error);
+      console.error("Error code:", (error as { code?: string }).code);
       console.error("You may need to create a composite index. Check the error message for a link.");
     }
   );
