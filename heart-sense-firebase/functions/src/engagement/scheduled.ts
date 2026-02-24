@@ -94,7 +94,8 @@ export const dailyReminderCheck = onSchedule(
 
 /**
  * Scheduled: Inactivity Alert Check (runs every day at 6 PM)
- * Alerts users who haven't logged in X days
+ * Alerts users who haven't logged in X days.
+ * Only sends one alert every 3 days to avoid overwhelming users.
  */
 export const inactivityAlertCheck = onSchedule(
   {
@@ -118,18 +119,18 @@ export const inactivityAlertCheck = onSchedule(
           continue; // User doesn't want reminders
         }
 
-        // Check if we already sent an inactivity alert recently
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        // Check if we already sent an inactivity alert in the last 3 days
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
         const recentAlert = await db
           .collection("engagement_alerts")
           .where("userId", "==", user.userId)
           .where("alertType", "==", "inactivity_warning")
-          .where("createdAt", ">=", Timestamp.fromDate(oneDayAgo))
+          .where("createdAt", ">=", Timestamp.fromDate(threeDaysAgo))
           .limit(1)
           .get();
 
         if (!recentAlert.empty) {
-          continue; // Already alerted recently
+          continue; // Already alerted within the last 3 days
         }
 
         // Calculate days inactive
@@ -153,7 +154,7 @@ export const inactivityAlertCheck = onSchedule(
           "Even a quick check-in helps track your health journey.",
           "medium",
           {daysInactive, lastActivityDate: user.lastActivityDate},
-          48 // Expires in 48 hours
+          72 // Expires in 72 hours (3 days)
         );
 
         alertsCreated++;
