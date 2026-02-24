@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { db } from "./firebase";
 import {
@@ -13,6 +14,7 @@ import {
   updateDoc,
   doc,
   setDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 // Configure how notifications appear when app is in foreground
@@ -25,7 +27,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Register for push notifications
+/** Get EAS project ID for Expo push token (required for push to work). */
+function getExpoProjectId(): string | undefined {
+  return (
+    (Constants.expoConfig?.extra?.projectId as string | undefined)?.trim() ||
+    (Constants.expoConfig?.extra?.eas?.projectId as string | undefined)?.trim() ||
+    (Constants.easConfig?.projectId as string | undefined)?.trim()
+  );
+}
+
+// Register for push notifications and return the token (so it can be saved to the backend).
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   let token: string | null = null;
 
@@ -52,8 +63,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       return null;
     }
 
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log("Push notification token:", token);
+    const projectId = getExpoProjectId();
+    if (projectId) {
+      const result = await Notifications.getExpoPushTokenAsync({ projectId });
+      token = result.data;
+    } else {
+      token = (await Notifications.getExpoPushTokenAsync()).data;
+    }
+    console.log("Push notification token:", token ? `${token.slice(0, 30)}...` : null);
   } else {
     // For simulator, we can still show local notifications
     console.log("Running on simulator - using local notifications only");
@@ -62,20 +79,22 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   return token;
 }
 
-// Save push token to Firestore for server-side notifications
-export async function savePushToken(userId: string, token: string): Promise<void> {
-  if (!token || !userId) return;
-
+/**
+ * Save the device's Expo push token to Firestore so the backend can send push
+ * notifications when the user is not in the app (e.g. engagement alerts).
+ */
+export async function savePushTokenToBackend(userId: string, token: string): Promise<void> {
   try {
-    await setDoc(doc(db, "push_tokens", userId), {
-      userId,
-      token,
-      platform: Platform.OS,
-      updatedAt: Timestamp.now(),
-    });
-    console.log("Push token saved to Firestore");
-  } catch (error) {
-    console.error("Failed to save push token:", error);
+    await setDoc(
+      doc(db, "user_preferences", userId),
+      {
+        expo_push_token: token.trim(),
+        expo_push_token_updated_at: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.warn("Failed to save push token to backend:", err);
   }
 }
 

@@ -34,3 +34,8 @@ export const sendPushNotificationCallable = httpsCallable<
   { token: string; title?: string; body?: string },
   { success: boolean; messageId?: string; error?: string }
 >(functions, "sendPushNotification");
+
+export const sendElevatedHeartRatePushCallable = httpsCallable<
+  { bpm?: number },
+  { success: boolean; messageId?: string; error?: string }
+>(functions, "sendElevatedHeartRatePush");

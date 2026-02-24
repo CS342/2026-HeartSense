@@ -8,10 +8,12 @@ import {
 import { signup as fbSignup, login as fbLogin, resendVerification as fbResendVerification, reloadUser as fbReloadUser } from '@/lib/auth';
 import {
   registerForPushNotificationsAsync,
+  savePushTokenToBackend,
   subscribeToEngagementAlerts,
-  savePushToken,
 } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
+import { ELEVATED_HR_NOTIFICATION_SCREEN } from '@/lib/elevatedHeartRateNotification';
 
 interface AuthContextType {
   user: User | null;
@@ -34,18 +36,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Set up notification listeners
   useEffect(() => {
-    // Request notification permissions
-    registerForPushNotificationsAsync();
+    registerForPushNotificationsAsync().then(token => {
+      if (token) console.log('Push token obtained (will save when user is set)');
+    });
 
-    // Listen for notifications when app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification);
     });
 
-    // Listen for notification taps
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification tapped:', response);
-      // You can navigate to a specific screen here based on the notification data
+      const data = response.notification.request.content.data as { screen?: string } | undefined;
+      if (data?.screen === ELEVATED_HR_NOTIFICATION_SCREEN) {
+        router.push('/screens/symptom-entry');
+      }
     });
 
     return () => {
@@ -58,19 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Set up Firestore alerts subscription and save push token when user logs in
+  // When user is set: save push token to backend (so they get notifications when app is closed) and subscribe to engagement alerts
   useEffect(() => {
     if (user) {
+      registerForPushNotificationsAsync().then(token => {
+        if (token) savePushTokenToBackend(user.uid, token);
+      });
       console.log('Setting up engagement alerts subscription for user:', user.uid);
       alertsUnsubscribeRef.current = subscribeToEngagementAlerts(user.uid, (alert) => {
         console.log('New engagement alert:', alert);
-      });
-
-      // Register and save push token for server-side notifications
-      registerForPushNotificationsAsync().then((token) => {
-        if (token) {
-          savePushToken(user.uid, token);
-        }
       });
     } else {
       // Clean up subscription when user logs out
