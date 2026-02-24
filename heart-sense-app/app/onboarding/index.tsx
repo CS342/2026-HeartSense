@@ -72,11 +72,7 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
-    if (!dateOfBirth) {
-      setError('Please provide your date of birth to continue.');
-      return;
-    }
-
+    // DOB is optional for now
     if (!gender) {
       setError('Please select your gender.');
       return;
@@ -100,7 +96,7 @@ export default function OnboardingScreen() {
 
     try {
       await updateDoc(doc(db, 'profiles', user.uid), {
-        date_of_birth: dateOfBirth,
+        ...(dateOfBirth && { date_of_birth: dateOfBirth }), // Only include if provided
         gender,
         height_cm: heightNum,
         weight_kg: weightNum,
