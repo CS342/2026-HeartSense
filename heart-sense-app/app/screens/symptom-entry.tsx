@@ -29,6 +29,7 @@ const SYMPTOM_TYPES = [
   'Shortness of Breath',
   'Palpitations',
   'Fatigue',
+  'Swelling',
   'Sense of Doom',
   'Weakness',
   'Loss of Vision',
@@ -84,6 +85,13 @@ const SEVERITY_DESCRIPTIONS: Record<string, Record<number, string>> = {
     3: 'Moderately tired, need extra rest',
     4: 'Severe exhaustion, can barely function',
     5: 'Complete exhaustion, cannot get out of bed',
+  },
+  'Swelling': {
+    1: 'No swelling',
+    2: 'Mild puffiness in ankles or feet, barely noticeable',
+    3: 'Moderate swelling in legs or ankles, shoes feel tight',
+    4: 'Severe swelling in legs, feet, or abdomen, limits movement',
+    5: 'Extreme swelling, skin feels stretched and painful',
   },
   'Sense of Doom': {
     1: 'No anxiety or dread',
