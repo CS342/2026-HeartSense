@@ -10,6 +10,7 @@ import {
   registerForPushNotificationsAsync,
   savePushTokenToBackend,
   subscribeToEngagementAlerts,
+  scheduleDailyMorningCheckIn,
 } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
@@ -67,6 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerForPushNotificationsAsync().then(token => {
         if (token) savePushTokenToBackend(user.uid, token);
       });
+
+      // Schedule daily 9am check-in reminder
+      scheduleDailyMorningCheckIn().then(notifId => {
+        console.log('Daily morning check-in scheduled:', notifId);
+      });
+
       console.log('Setting up engagement alerts subscription for user:', user.uid);
       alertsUnsubscribeRef.current = subscribeToEngagementAlerts(user.uid, (alert) => {
         console.log('New engagement alert:', alert);

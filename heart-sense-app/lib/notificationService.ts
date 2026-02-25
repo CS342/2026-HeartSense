@@ -253,3 +253,41 @@ export async function cancelAllNotifications(): Promise<void> {
 export async function getPendingNotifications(): Promise<Notifications.NotificationRequest[]> {
   return await Notifications.getAllScheduledNotificationsAsync();
 }
+
+/**
+ * Schedule a daily notification at 9am to remind user to log well-being and symptoms
+ */
+export async function scheduleDailyMorningCheckIn(): Promise<string> {
+  // Request permissions first
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== 'granted') {
+    console.log('Notification permissions not granted');
+    return '';
+  }
+
+  // Cancel any existing daily check-in notifications to avoid duplicates
+  const pending = await getPendingNotifications();
+  for (const notif of pending) {
+    if (notif.content.data?.type === 'daily-checkin') {
+      await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+    }
+  }
+
+  const notificationId = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Good morning! 🌅",
+      body: "Time for your daily check-in. Log your well-being and any symptoms.",
+      data: { type: 'daily-checkin' },
+      sound: true,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: 9,
+      minute: 0,
+      repeats: true,
+    },
+  });
+
+  console.log('Daily 9am check-in notification scheduled:', notificationId);
+  return notificationId;
+}
