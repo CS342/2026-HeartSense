@@ -61,7 +61,7 @@ export const dailyReminderCheck = onSchedule(
         const existingReminder = await db
           .collection("engagement_alerts")
           .where("userId", "==", userId)
-          .where("alertType", "==", "inactivity_warning")
+          .where("alertType", "==", "daily_reminder")
           .where("createdAt", ">=", Timestamp.fromDate(todayStart))
           .limit(1)
           .get();
@@ -73,7 +73,7 @@ export const dailyReminderCheck = onSchedule(
         // Create daily reminder alert
         await createEngagementAlert(
           userId,
-          "inactivity_warning",
+          "daily_reminder",
           "Daily Health Check-in",
           "Take a moment to log how you're feeling today. " +
           "Regular tracking helps you and your healthcare team spot patterns.",
@@ -149,8 +149,7 @@ export const inactivityAlertCheck = onSchedule(
         await createEngagementAlert(
           user.userId,
           "inactivity_warning",
-          "We Miss You!",
-          `It's been ${daysInactive} days since your last health log. ` +
+          `We Miss You! It's been ${daysInactive} days`,
           "Even a quick check-in helps track your health journey.",
           "medium",
           {daysInactive, lastActivityDate: user.lastActivityDate},

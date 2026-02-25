@@ -105,7 +105,7 @@ export const testDailyReminder = onRequest(async (req, res) => {
 
     const alertRef = await db.collection("engagement_alerts").add({
       userId,
-      alertType: "inactivity_warning",
+      alertType: "daily_reminder",
       title: "Daily Health Check-in",
       message: "Take a moment to log how you're feeling today. Regular tracking helps you and your healthcare team spot patterns.",
       priority: "low",
@@ -113,7 +113,7 @@ export const testDailyReminder = onRequest(async (req, res) => {
       isDismissed: false,
       createdAt: now,
       expiresAt,
-      metadata: {type: "daily_reminder", test: true},
+      metadata: {test: true},
     });
 
     res.json({
@@ -146,14 +146,14 @@ export const testInactivityCheck = onRequest(async (req, res) => {
     // Create a test inactivity alert
     const now = Timestamp.now();
     const expiresAt = Timestamp.fromDate(
-      new Date(Date.now() + 48 * 60 * 60 * 1000)
+      new Date(Date.now() + 72 * 60 * 60 * 1000) // 72 hours (3 days)
     );
 
     const alertRef = await db.collection("engagement_alerts").add({
       userId,
       alertType: "inactivity_warning",
-      title: "We Miss You!",
-      message: "It's been a few days since your last health log. Even a quick check-in helps track your health journey.",
+      title: "We Miss You! It's been 3 days",
+      message: "Even a quick check-in helps track your health journey.",
       priority: "medium",
       isRead: false,
       isDismissed: false,
