@@ -20,6 +20,7 @@ export interface UserEngagementStats {
 
 // Engagement alert types
 export type AlertType =
+  | "daily_reminder" // Daily check-in reminder
   | "inactivity_warning" // User hasn't logged in X days
   | "milestone_reached" // General milestone (entries, days active)
   | "weekly_summary" // Weekly engagement summary
@@ -89,7 +90,7 @@ export interface HealthInsight {
 
 // Configuration for engagement features
 export interface EngagementConfig {
-  inactivityThresholdDays: number; // Days before inactivity alert (default: 2)
+  inactivityThresholdDays: number; // Days before inactivity alert (default: 3)
   dailyReminderHour: number; // Hour of day for daily reminder (default: 9)
   weeklyInsightDay: number; // Day of week for weekly insights (0=Sunday, default: 1)
   enabledAlertTypes: AlertType[];
@@ -103,10 +104,11 @@ export const DAYS_ACTIVE_MILESTONES = [7, 30, 100] as const;
 
 // Default engagement configuration
 export const DEFAULT_ENGAGEMENT_CONFIG: EngagementConfig = {
-  inactivityThresholdDays: 2,
+  inactivityThresholdDays: 3,
   dailyReminderHour: 9,
   weeklyInsightDay: 1,
   enabledAlertTypes: [
+    "daily_reminder",
     "inactivity_warning",
     "milestone_reached",
     "weekly_summary",
