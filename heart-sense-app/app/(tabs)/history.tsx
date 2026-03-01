@@ -8,11 +8,14 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges } from '@/lib/symptomService';
-import { Heart, Activity, Stethoscope, TrendingUp } from 'lucide-react-native';
+import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+
+type EntryType = 'all' | 'symptom' | 'wellbeing' | 'activity' | 'medical';
 
 interface TimelineEntry {
   id: string;
@@ -23,10 +26,20 @@ interface TimelineEntry {
   details?: any;
 }
 
+const FILTER_OPTIONS: { key: EntryType; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'symptom', label: 'Symptoms' },
+  { key: 'wellbeing', label: 'Well-being' },
+  { key: 'activity', label: 'Activities' },
+  { key: 'medical', label: 'Medical' },
+];
+
 export default function HistoryScreen() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<EntryType>('all');
+  const [selectedEntry, setSelectedEntry] = useState<TimelineEntry | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -35,14 +48,9 @@ export default function HistoryScreen() {
   );
 
   const loadHistory = async () => {
-    console.log('loadHistory called, user:', user);
-    if (!user) {
-      console.log('No user, returning');
-      return;
-    }
+    if (!user) return;
 
     try {
-      console.log('Fetching symptoms and activities for user:', user.uid);
       const [symptomsRes, activitiesRes, wellbeingRes, medicalChangesRes] = await Promise.all([
         getSymptoms(user.uid, 50),
         getActivities(user.uid, 50),
@@ -50,20 +58,10 @@ export default function HistoryScreen() {
         getMedicalChanges(user.uid, 50),
       ]);
 
-      console.log('Symptoms response:', symptomsRes);
-      console.log('Activities response:', activitiesRes);
-      console.log('Wellbeing response:', wellbeingRes);
-      console.log('Medical changes response:', medicalChangesRes);
-
-
       const timeline: TimelineEntry[] = [];
-
-      console.log('Symptoms data:', symptomsRes.data);
-      console.log('Activities data:', activitiesRes.data);
 
       if (symptomsRes.data && Array.isArray(symptomsRes.data)) {
         symptomsRes.data.forEach((s: any) => {
-          console.log('Processing symptom:', s);
           timeline.push({
             id: s.id,
             type: 'symptom',
@@ -77,7 +75,6 @@ export default function HistoryScreen() {
 
       if (activitiesRes.data && Array.isArray(activitiesRes.data)) {
         activitiesRes.data.forEach((a: any) => {
-          console.log('Processing activity:', a);
           const durationInfo = `${a.durationMinutes} min - ${a.intensity} intensity`;
           const description = a.description
             ? `${a.description} • ${durationInfo}`
@@ -93,14 +90,14 @@ export default function HistoryScreen() {
           });
         });
       }
+
       if (wellbeingRes.data && Array.isArray(wellbeingRes.data)) {
         wellbeingRes.data.forEach((w: any) => {
-          console.log('Processing wellbeing:', w);
           timeline.push({
             id: w.id,
             type: 'wellbeing',
-            title: `Energy: ${w.energyLevel} - Mood: ${w.moodRating} - Stress: ${w.stressLevel}`,
-            description: w.notes,
+            title: 'Well-being Rating',
+            description: `Energy: ${w.energyLevel} · Mood: ${w.moodRating} · Stress: ${w.stressLevel}`,
             timestamp: w.recordedAt,
             details: w,
           });
@@ -109,7 +106,6 @@ export default function HistoryScreen() {
 
       if (medicalChangesRes.data && Array.isArray(medicalChangesRes.data)) {
         medicalChangesRes.data.forEach((m: any) => {
-          console.log('Processing medical change:', m);
           timeline.push({
             id: m.id,
             type: 'medical',
@@ -122,8 +118,6 @@ export default function HistoryScreen() {
       }
 
       timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-      console.log('Timeline entries:', timeline.length);
       setEntries(timeline);
     } catch (error) {
       console.error('Error loading history:', error);
@@ -131,6 +125,10 @@ export default function HistoryScreen() {
       setLoading(false);
     }
   };
+
+  const filteredEntries = activeFilter === 'all'
+    ? entries
+    : entries.filter((e) => e.type === activeFilter);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -162,6 +160,16 @@ export default function HistoryScreen() {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'symptom': return 'Symptom';
+      case 'wellbeing': return 'Well-being';
+      case 'activity': return 'Activity';
+      case 'medical': return 'Medical Change';
+      default: return '';
+    }
+  };
+
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -179,6 +187,75 @@ export default function HistoryScreen() {
     }
   };
 
+  const formatFullDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const renderDetailContent = (entry: TimelineEntry) => {
+    const d = entry.details;
+    if (!d) return null;
+
+    switch (entry.type) {
+      case 'symptom':
+        return (
+          <>
+            <DetailRow label="Symptom" value={d.symptomType} />
+            <DetailRow label="Severity" value={`${d.severity}/5`} />
+            {d.description ? <DetailRow label="Details" value={d.description} /> : null}
+            <DetailRow label="Occurred" value={formatFullDate(d.occurredAt)} />
+            {d.vitalsContext?.samples?.length > 0 && (
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Vitals at time of symptom</Text>
+                {d.vitalsContext.samples.map((s: any, i: number) => (
+                  <Text key={i} style={styles.detailVital}>
+                    {s.type}: {s.value} {s.unit}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
+        );
+      case 'wellbeing':
+        return (
+          <>
+            <DetailRow label="Energy" value={`${d.energyLevel}/5`} />
+            <DetailRow label="Mood" value={`${d.moodRating}/5`} />
+            <DetailRow label="Stress" value={`${d.stressLevel}/5`} />
+            {d.notes ? <DetailRow label="Notes" value={d.notes} /> : null}
+            <DetailRow label="Recorded" value={formatFullDate(d.recordedAt)} />
+          </>
+        );
+      case 'activity':
+        return (
+          <>
+            <DetailRow label="Activity" value={d.activityType} />
+            <DetailRow label="Duration" value={`${d.durationMinutes} minutes`} />
+            <DetailRow label="Intensity" value={d.intensity} />
+            {d.description ? <DetailRow label="Details" value={d.description} /> : null}
+            <DetailRow label="Occurred" value={formatFullDate(d.occurredAt)} />
+          </>
+        );
+      case 'medical':
+        return (
+          <>
+            <DetailRow label="Type" value={d.conditionType} />
+            <DetailRow label="Description" value={d.description} />
+            <DetailRow label="Occurred" value={formatFullDate(d.occurredAt)} />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -193,33 +270,101 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>History</Text>
-        <Text style={styles.subtitle}>{entries.length} total entries</Text>
+        <Text style={styles.subtitle}>{filteredEntries.length} {activeFilter === 'all' ? 'total' : activeFilter} entries</Text>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {FILTER_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[styles.filterChip, activeFilter === opt.key && styles.filterChipActive]}
+              onPress={() => setActiveFilter(opt.key)}
+            >
+              <Text style={[styles.filterChipText, activeFilter === opt.key && styles.filterChipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {entries.length === 0 ? (
+        {filteredEntries.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No entries yet</Text>
-            <Text style={styles.emptyText}>Start tracking your health to see your history here</Text>
+            <Text style={styles.emptyTitle}>
+              {activeFilter === 'all' ? 'No entries yet' : `No ${activeFilter} entries`}
+            </Text>
+            <Text style={styles.emptyText}>
+              {activeFilter === 'all'
+                ? 'Start tracking your health to see your history here'
+                : `You haven't logged any ${activeFilter} entries yet`}
+            </Text>
           </View>
         ) : (
           <View style={styles.timeline}>
-            {entries.map((entry) => (
-              <View key={entry.id} style={styles.entryCard}>
+            {filteredEntries.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                style={styles.entryCard}
+                onPress={() => setSelectedEntry(entry)}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.iconContainer, { backgroundColor: getBackgroundColor(entry.type) }]}>
                   {getIcon(entry.type)}
                 </View>
                 <View style={styles.entryContent}>
                   <Text style={styles.entryTitle}>{entry.title}</Text>
-                  <Text style={styles.entryDescription}>{entry.description}</Text>
+                  <Text style={styles.entryDescription} numberOfLines={2}>{entry.description}</Text>
                   <Text style={styles.entryTime}>{formatDate(entry.timestamp)}</Text>
                 </View>
-              </View>
+                <View style={styles.chevronContainer}>
+                  <ChevronRight color="#ccc" size={18} />
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={selectedEntry !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSelectedEntry(null)}
+      >
+        {selectedEntry && (
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={[styles.modalIconContainer, { backgroundColor: getBackgroundColor(selectedEntry.type) }]}>
+                  {getIcon(selectedEntry.type)}
+                </View>
+                <Text style={styles.modalType}>{getTypeLabel(selectedEntry.type)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedEntry(null)} style={styles.modalClose}>
+                <X color="#666" size={24} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{selectedEntry.title}</Text>
+              <Text style={styles.modalTimestamp}>{formatFullDate(selectedEntry.timestamp)}</Text>
+              <View style={styles.detailDivider} />
+              {renderDetailContent(selectedEntry)}
+            </ScrollView>
+          </SafeAreaView>
+        )}
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
   );
 }
 
@@ -231,9 +376,8 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 32,
+    paddingBottom: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
   },
   title: {
     fontSize: 32,
@@ -244,6 +388,36 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  filterContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+    paddingBottom: 12,
+  },
+  filterScroll: {
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
+  filterChipActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  filterChipTextActive: {
+    color: '#fff',
   },
   scrollView: {
     flex: 1,
@@ -273,6 +447,7 @@ const styles = StyleSheet.create({
   },
   entryCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
@@ -305,5 +480,96 @@ const styles = StyleSheet.create({
   entryTime: {
     fontSize: 12,
     color: '#999',
+  },
+  chevronContainer: {
+    marginLeft: 8,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+  },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalType: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalClose: {
+    padding: 4,
+  },
+  modalContent: {
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  modalTimestamp: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 16,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: '#e5e5e5',
+    marginBottom: 20,
+  },
+  detailRow: {
+    marginBottom: 16,
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#1a1a1a',
+    lineHeight: 22,
+  },
+  detailSection: {
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 14,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+  },
+  detailSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  detailVital: {
+    fontSize: 14,
+    color: '#1a1a1a',
+    marginBottom: 4,
   },
 });

@@ -397,6 +397,36 @@ export const calculateWellbeingAverage = (ratings: WellbeingRating[]) => {
   };
 };
 
+export const getPreviousWellbeing = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'well_being_ratings'),
+      where('user_id', '==', userId),
+      orderBy('recorded_at', 'desc'),
+      limit(1)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return { data: null, error: null };
+    }
+
+    const data = querySnapshot.docs[0].data();
+    return {
+      data: {
+        energyLevel: data.energy_level,
+        moodRating: data.mood_rating,
+        stressLevel: data.stress_level,
+        recordedAt: data.recorded_at?.toDate?.()?.toISOString() ?? null,
+      },
+      error: null,
+    };
+  } catch (error: any) {
+    return { data: null, error: error.message };
+  }
+};
+
 export const logWellbeingRating = async (data: WellbeingRating) => {
   try {
     const docRef = await addDoc(collection(db, 'well_being_ratings'), {
