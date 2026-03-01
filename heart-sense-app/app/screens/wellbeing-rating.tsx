@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { logWellbeingRating } from '@/lib/symptomService';
-import { ArrowLeft, Zap, Wind, PersonStanding } from 'lucide-react-native';
+import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
+import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
 const ENERGY_LEVELS = [
@@ -51,6 +51,12 @@ export default function WellbeingRating() {
   const [moodRating, setMoodRating] = useState(3);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [previousRating, setPreviousRating] = useState<{
+    energyLevel: number;
+    moodRating: number;
+    stressLevel: number;
+    recordedAt: string | null;
+  } | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const notesSectionRef = useRef<View>(null);
@@ -87,6 +93,28 @@ export default function WellbeingRating() {
       hideSub.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await getPreviousWellbeing(user.uid);
+      setPreviousRating(data);
+    })();
+  }, [user]);
+
+  const formatPreviousDate = (timestamp: string | null) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'earlier today';
+    if (diffDays === 1) return 'yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    const weeks = Math.floor(diffDays / 7);
+    if (diffDays < 30) return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   const handleSubmit = async () => {
     const uid = user?.uid;
@@ -146,6 +174,26 @@ export default function WellbeingRating() {
           keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
+        {previousRating && (
+          <View style={styles.previousBox}>
+            <View style={styles.previousHeader}>
+              <TrendingUp color={theme.primary} size={18} />
+              <Text style={styles.previousTitle}>Previous Rating</Text>
+            </View>
+            <View style={styles.previousContent}>
+              <View style={styles.previousRow}>
+                <Text style={styles.previousLabel}>Energy: {previousRating.energyLevel}/5</Text>
+                <Text style={styles.previousLabel}>Mood: {previousRating.moodRating}/5</Text>
+                <Text style={styles.previousLabel}>Stress: {previousRating.stressLevel}/5</Text>
+              </View>
+              <View style={styles.previousDateRow}>
+                <Calendar color="#666" size={14} />
+                <Text style={styles.previousDate}>{formatPreviousDate(previousRating.recordedAt)}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Zap color={theme.primary} size={20} />
@@ -356,6 +404,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     minHeight: 120,
     marginTop: 4,
+  },
+  previousBox: {
+    backgroundColor: theme.primaryLight,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  previousHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  previousTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.primary,
+  },
+  previousContent: {
+    gap: 8,
+  },
+  previousRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  previousLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e40af',
+  },
+  previousDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  previousDate: {
+    fontSize: 13,
+    color: '#1e40af',
   },
   submitButton: {
     backgroundColor: theme.primary,
