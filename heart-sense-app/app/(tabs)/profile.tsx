@@ -45,6 +45,8 @@ import {
   Watch,
   Ruler,
   Scale,
+  Pencil,
+  Check,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
 
@@ -127,6 +129,8 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingElevatedHrThreshold, setEditingElevatedHrThreshold] = useState(false);
+  const [elevatedHrThreshold, setElevatedHrThreshold] = useState(100);
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [infoModal, setInfoModal] = useState<{
     visible: boolean;
@@ -247,6 +251,7 @@ export default function ProfileScreen() {
               ? Math.max(60, Math.min(200, data.elevated_heart_rate_threshold_bpm))
               : 100,
         });
+        setElevatedHrThreshold(data.elevated_heart_rate_threshold_bpm);
       } else {
         // create defaults
         const defaults: NotificationPreferences = {
@@ -297,11 +302,6 @@ export default function ProfileScreen() {
       setNotifications(prev);
       Alert.alert("Error", "Failed to update notification preference");
     }
-  };
-
-  const updateElevatedHrThreshold = async (bpm: number) => {
-    const clamped = Math.max(60, Math.min(200, bpm));
-    await updateNotificationPreference("elevated_heart_rate_threshold_bpm", clamped);
   };
 
   const loadAccountStats = async () => {
@@ -395,6 +395,25 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleElevatedHrThresholdChange = (text: string) => {
+    if (text.trim() === '') {
+      setElevatedHrThreshold(0);
+      return;
+    }
+    const n = parseInt(text, 10);
+    setElevatedHrThreshold(Number.isNaN(n) ? 0 : n);
+  };
+
+  const handleSaveElevatedHrThreshold = async () => {
+    if (!user) return;
+    if (elevatedHrThreshold < 60 || elevatedHrThreshold > 200) {
+      Alert.alert("Invalid input", "Please enter a valid heart rate threshold between 60 and 200 bpm.");
+      return;
+    }
+    await updateNotificationPreference("elevated_heart_rate_threshold_bpm", elevatedHrThreshold);
+    setEditingElevatedHrThreshold(false);
   };
 
   const openInfoModal = (title: string, content: string) => {
@@ -789,24 +808,47 @@ export default function ProfileScreen() {
 
           <View style={styles.settingRow}>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+              <View style={styles.settingTitleRow}>
+                <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+                {editingElevatedHrThreshold ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.settingTitleEditButton,
+                      { backgroundColor: theme.primaryLight, borderRadius: 5, padding: 2, paddingBottom: 2 }
+                    ]}
+                    onPress={handleSaveElevatedHrThreshold}
+                  >
+                    <Check color={theme.primary} size={20} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.settingTitleEditButton}
+                    onPress={() => setEditingElevatedHrThreshold(true)}
+                  >
+                    <Pencil color={theme.primary} size={20} />
+                  </TouchableOpacity>
+                )}
+              </View>
               <Text style={styles.settingDescription}>
-                You’ll be notified when an elevated heart rate is detected so you can log a symptom. Notify when at or above (bpm):
+                You'll be notified when an elevated heart rate is detected so you can log a symptom.
               </Text>
+              <View style={styles.settingRowContent}>
+                <Text style={styles.settingLabel}>Notify when at or above (bpm): </Text>
+                {editingElevatedHrThreshold ? (
+                  <TextInput
+                    style={styles.thresholdInput}
+                    value={elevatedHrThreshold.toString()}
+                    onChangeText={(text) => handleElevatedHrThresholdChange(text)}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    placeholder="100"
+                  />
+                ) : (
+                  <Text style={styles.settingValue}>{notifications.elevated_heart_rate_threshold_bpm}</Text>
+
+                )}
+              </View>
             </View>
-            <TextInput
-              style={styles.thresholdInput}
-              value={String(notifications.elevated_heart_rate_threshold_bpm)}
-              onChangeText={(t) => {
-                const n = parseInt(t.replace(/\D/g, ''), 10);
-                if (!isNaN(n)) setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: Math.max(60, Math.min(200, n)) }));
-                else if (t === '') setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: 100 }));
-              }}
-              onBlur={() => updateElevatedHrThreshold(notifications.elevated_heart_rate_threshold_bpm)}
-              keyboardType="number-pad"
-              maxLength={3}
-              placeholder="100"
-            />
           </View>
         </View>
 
@@ -1178,5 +1220,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+  },
+  settingTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  settingTitleEditButton: {
+    paddingBottom: 8,
+  },
+  settingLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1a1a1a",
+  },
+  settingRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  settingValue: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: "600",
   },
 });
