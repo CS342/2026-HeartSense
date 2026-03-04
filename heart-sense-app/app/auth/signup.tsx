@@ -14,6 +14,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { theme } from '@/theme/colors';
 import AppLogo from '@/components/AppLogo';
 
+const validatePassword = (password: string): string | null => {
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must include at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must include at least one lowercase letter';
+  }
+  if (!/\d/.test(password)) {
+    return 'Password must include at least one number';
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return 'Password must include at least one special character';
+  }
+  return null;
+};
+
 export default function Signup() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -38,8 +57,9 @@ export default function Signup() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -137,6 +157,9 @@ export default function Signup() {
                   secureTextEntry
                   autoComplete="password-new"
                 />
+                <Text style={styles.passwordHint}>
+                  Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.
+                </Text>
               </View>
 
               <View style={styles.inputGroup}>
@@ -231,6 +254,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginBottom: 8,
+  },
+  passwordHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    lineHeight: 16,
   },
   input: {
     height: 48,
