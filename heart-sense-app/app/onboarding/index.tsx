@@ -232,6 +232,7 @@ export default function OnboardingScreen() {
                     }
                     textColor="black"
                     accentColor="black"
+                    style={styles.datePicker}
                   />
                   {Platform.OS === 'ios' && (
                     <TouchableOpacity
@@ -525,5 +526,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
+  },
+  datePicker: {
+    height: 200,
   },
 });

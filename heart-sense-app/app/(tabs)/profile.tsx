@@ -42,15 +42,14 @@ import {
   Bell,
   BarChart3,
   Info,
-  Send,
   Watch,
   Ruler,
   Scale,
+  Pencil,
+  Check,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
-import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
-import { sendPushNotificationCallable } from "@/lib/firebase";
+
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
 
@@ -130,8 +129,9 @@ export default function ProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingElevatedHrThreshold, setEditingElevatedHrThreshold] = useState(false);
+  const [elevatedHrThreshold, setElevatedHrThreshold] = useState(100);
   const [showDobPicker, setShowDobPicker] = useState(false);
-  const [sendingTestNotification, setSendingTestNotification] = useState(false);
   const [infoModal, setInfoModal] = useState<{
     visible: boolean;
     title: string;
@@ -251,6 +251,7 @@ export default function ProfileScreen() {
               ? Math.max(60, Math.min(200, data.elevated_heart_rate_threshold_bpm))
               : 100,
         });
+        setElevatedHrThreshold(data.elevated_heart_rate_threshold_bpm);
       } else {
         // create defaults
         const defaults: NotificationPreferences = {
@@ -301,11 +302,6 @@ export default function ProfileScreen() {
       setNotifications(prev);
       Alert.alert("Error", "Failed to update notification preference");
     }
-  };
-
-  const updateElevatedHrThreshold = async (bpm: number) => {
-    const clamped = Math.max(60, Math.min(200, bpm));
-    await updateNotificationPreference("elevated_heart_rate_threshold_bpm", clamped);
   };
 
   const loadAccountStats = async () => {
@@ -401,6 +397,25 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleElevatedHrThresholdChange = (text: string) => {
+    if (text.trim() === '') {
+      setElevatedHrThreshold(0);
+      return;
+    }
+    const n = parseInt(text, 10);
+    setElevatedHrThreshold(Number.isNaN(n) ? 0 : n);
+  };
+
+  const handleSaveElevatedHrThreshold = async () => {
+    if (!user) return;
+    if (elevatedHrThreshold < 60 || elevatedHrThreshold > 200) {
+      Alert.alert("Invalid input", "Please enter a valid heart rate threshold between 60 and 200 bpm.");
+      return;
+    }
+    await updateNotificationPreference("elevated_heart_rate_threshold_bpm", elevatedHrThreshold);
+    setEditingElevatedHrThreshold(false);
+  };
+
   const openInfoModal = (title: string, content: string) => {
     setInfoModal({ visible: true, title, content });
   };
@@ -441,68 +456,6 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  };
-
-  const handleSendTestNotification = async () => {
-    if (!user) return;
-    setSendingTestNotification(true);
-    try {
-      const { status: existing } = await Notifications.getPermissionsAsync();
-      let final = existing;
-      if (existing !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        final = status;
-      }
-      if (final !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Enable notifications in your device settings to receive test notifications."
-        );
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const projectId =
-        (Constants.expoConfig?.extra?.projectId as string | undefined)?.trim() ||
-        (Constants.expoConfig?.extra?.eas?.projectId as string | undefined)?.trim() ||
-        (Constants.easConfig?.projectId as string | undefined)?.trim();
-      if (!projectId) {
-        Alert.alert(
-          "Project ID required",
-          "Push notifications need your Expo project ID.\n\n1. Open https://expo.dev and open your project.\n2. Copy the Project ID from project settings.\n3. In heart-sense-app, create a .env file with:\nEXPO_PUBLIC_EAS_PROJECT_ID=your-project-id\n4. Restart the app (expo start --clear)."
-        );
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const tokenResult = await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-      const token = tokenResult.data;
-      if (!token) {
-        Alert.alert("Error", "Could not get push token. Try restarting the app.");
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const { data } = await sendPushNotificationCallable({
-        token,
-        title: "Daily Health Check-in",
-        body: "Take a moment to log how you're feeling today on Heart Sense.",
-      });
-
-      if (data.success) {
-        Alert.alert("Sent!", "Check your device for the test notification.");
-      } else {
-        Alert.alert("Send failed", data.error ?? "Unknown error");
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("Error sending test notification:", message);
-      Alert.alert("Error", message);
-    } finally {
-      setSendingTestNotification(false);
-    }
   };
 
   return (
@@ -661,18 +614,21 @@ export default function ProfileScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showDobPicker && (
-                    <DateTimePicker
-                      value={dobDate}
-                      mode="date"
-                      display={Platform.OS === "ios" ? "spinner" : "default"}
-                      onChange={onDobPickerChange}
-                      maximumDate={new Date()}
-                      minimumDate={
-                        new Date(new Date().setFullYear(new Date().getFullYear() - 120))
-                      }
-                      textColor='black'
-                      accentColor='black'
-                    />
+                    <View style={styles.dateTimePickerWrapper}>
+                      <DateTimePicker
+                        value={dobDate}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        onChange={onDobPickerChange}
+                        maximumDate={new Date()}
+                        minimumDate={
+                          new Date(new Date().setFullYear(new Date().getFullYear() - 120))
+                        }
+                        textColor="black"
+                        accentColor="black"
+                        style={styles.dateTimePicker}
+                      />
+                    </View>
                   )}
                   {Platform.OS === "ios" && showDobPicker && (
                     <TouchableOpacity
@@ -852,36 +808,48 @@ export default function ProfileScreen() {
 
           <View style={styles.settingRow}>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+              <View style={styles.settingTitleRow}>
+                <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+                {editingElevatedHrThreshold ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.settingTitleEditButton,
+                      { backgroundColor: theme.primaryLight, borderRadius: 5, padding: 2, paddingBottom: 2 }
+                    ]}
+                    onPress={handleSaveElevatedHrThreshold}
+                  >
+                    <Check color={theme.primary} size={20} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.settingTitleEditButton}
+                    onPress={() => setEditingElevatedHrThreshold(true)}
+                  >
+                    <Pencil color={theme.primary} size={20} />
+                  </TouchableOpacity>
+                )}
+              </View>
               <Text style={styles.settingDescription}>
-                You’ll be notified when an elevated heart rate is detected so you can log a symptom. Notify when at or above (bpm):
+                You'll be notified when an elevated heart rate is detected so you can log a symptom.
               </Text>
-            </View>
-            <TextInput
-              style={styles.thresholdInput}
-              value={String(notifications.elevated_heart_rate_threshold_bpm)}
-              onChangeText={(t) => {
-                const n = parseInt(t.replace(/\D/g, ''), 10);
-                if (!isNaN(n)) setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: Math.max(60, Math.min(200, n)) }));
-                else if (t === '') setNotifications((prev) => ({ ...prev, elevated_heart_rate_threshold_bpm: 100 }));
-              }}
-              onBlur={() => updateElevatedHrThreshold(notifications.elevated_heart_rate_threshold_bpm)}
-              keyboardType="number-pad"
-              maxLength={3}
-              placeholder="100"
-            />
-          </View>
+              <View style={styles.settingRowContent}>
+                <Text style={styles.settingLabel}>Notify when at or above (bpm): </Text>
+                {editingElevatedHrThreshold ? (
+                  <TextInput
+                    style={styles.thresholdInput}
+                    value={elevatedHrThreshold.toString()}
+                    onChangeText={(text) => handleElevatedHrThresholdChange(text)}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                    placeholder="100"
+                  />
+                ) : (
+                  <Text style={styles.settingValue}>{notifications.elevated_heart_rate_threshold_bpm}</Text>
 
-          <TouchableOpacity
-            style={styles.testNotificationButton}
-            onPress={handleSendTestNotification}
-            disabled={sendingTestNotification}
-          >
-            <Send color="#fff" size={20} />
-            <Text style={styles.testNotificationButtonText}>
-              {sendingTestNotification ? "Sending…" : "Send test notification"}
-            </Text>
-          </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -1102,6 +1070,15 @@ const styles = StyleSheet.create({
     color: theme.primary,
     fontWeight: "600",
   },
+  dateTimePickerWrapper: {
+    height: 216,
+    width: "100%",
+    marginVertical: 8,
+  },
+  dateTimePicker: {
+    height: 216,
+    width: "100%",
+  },
   donePickerButton: { alignItems: "center", paddingVertical: 12 },
   donePickerText: { fontSize: 16, color: theme.primary, fontWeight: "600" },
   appleWatchStatus: {
@@ -1243,5 +1220,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+  },
+  settingTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  settingTitleEditButton: {
+    paddingBottom: 8,
+  },
+  settingLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1a1a1a",
+  },
+  settingRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  settingValue: {
+    fontSize: 14,
+    color: theme.primary,
+    fontWeight: "600",
   },
 });
