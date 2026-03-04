@@ -89,10 +89,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   titleThin: {
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: undefined,
   },
   titleBold: {
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: undefined,
   },
   subtitle: {
     fontWeight: '500',

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { NotificationBanner } from '@/components/NotificationBanner';
@@ -23,7 +22,7 @@ Notifications.setNotificationHandler({
 
 export default function RootLayout() {
   useFrameworkReady();
-  const [fontsLoaded] = useFonts({ DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
+
   const [notification, setNotification] = useState<{
     title: string;
     message: string;
@@ -41,11 +40,6 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  if (!fontsLoaded) return null;
-
-  // Apply DM Sans globally via default Text style
-  const defaultTextStyle = (Text as any).defaultProps ?? {};
-  (Text as any).defaultProps = { ...defaultTextStyle, style: [{ fontFamily: 'DMSans_400Regular' }, defaultTextStyle.style] };
 
   return (
     <AuthProvider>
