@@ -63,6 +63,7 @@ import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
 import { fetchVitalsAroundSymptom } from '@/services/healthkit/healthSyncService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Slider from '@react-native-community/slider';
 import { theme } from '@/theme/colors';
 
 const SEVERITY_COLORS: Record<number, string> = {
@@ -487,22 +488,25 @@ export default function SymptomEntry() {
                 </View>
               </View>
             ) : (
-              <View style={styles.severityContainer}>
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <TouchableOpacity
-                    key={num}
-                    style={[
-                      styles.severityButton,
-                      { borderColor: SEVERITY_COLORS[num] },
-                      severity === num && { backgroundColor: SEVERITY_COLORS[num], borderColor: SEVERITY_COLORS[num] },
-                    ]}
-                    onPress={() => setSeverity(num)}
-                  >
-                    <Text style={[styles.severityText, { color: severity === num ? '#fff' : SEVERITY_COLORS[num] }]}>
+              <View>
+                <Slider
+                  style={{ width: '100%', height: 40 }}
+                  minimumValue={1}
+                  maximumValue={5}
+                  step={1}
+                  value={severity}
+                  onValueChange={(val) => setSeverity(val)}
+                  minimumTrackTintColor={SEVERITY_COLORS[severity]}
+                  maximumTrackTintColor="#ddd"
+                  thumbTintColor={SEVERITY_COLORS[severity]}
+                />
+                <View style={styles.severityLabels}>
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <Text key={num} style={[styles.severityLabel, { color: severity === num ? SEVERITY_COLORS[num] : '#bbb', fontWeight: severity === num ? '700' : '400' }]}>
                       {num}
                     </Text>
-                  </TouchableOpacity>
-                ))}
+                  ))}
+                </View>
               </View>
             )}
             <View style={[styles.severityDescriptionBox, { borderColor: SEVERITY_COLORS[severity], backgroundColor: SEVERITY_COLORS[severity] + '18' }]}>
