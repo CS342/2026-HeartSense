@@ -381,7 +381,7 @@ export default function SymptomEntry() {
                 }}
               />
             ) : (
-              <>
+              <View style={styles.dateTimeContainer}>
                 <TouchableOpacity
                   style={styles.dateTimeButton}
                   onPress={() => setShowPicker(true)}
@@ -390,16 +390,20 @@ export default function SymptomEntry() {
                   <Clock color={theme.primary} size={20} />
                   <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
                 </TouchableOpacity>
+
                 {showPicker && (
-                  <DateTimePicker
-                    value={occurredAt}
-                    mode="datetime"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onPickerChange}
-                    maximumDate={new Date()}
-                    textColor='black'
-                    accentColor='black'
-                  />
+                  <View style={styles.dateTimePickerWrapper}>
+                    <DateTimePicker
+                      value={occurredAt}
+                      mode="datetime"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onPickerChange}
+                      maximumDate={new Date()}
+                      textColor="black"
+                      accentColor="black"
+                      style={styles.dateTimePicker}
+                    />
+                  </View>
                 )}
                 {Platform.OS === 'ios' && showPicker && (
                   <TouchableOpacity
@@ -409,7 +413,7 @@ export default function SymptomEntry() {
                     <Text style={styles.donePickerText}>Done</Text>
                   </TouchableOpacity>
                 )}
-              </>
+              </View>
             )}
           </View>
 
@@ -644,6 +648,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1e40af',
   },
+  dateTimeContainer: {
+    width: '100%',
+  },
+  dateTimePickerWrapper: {
+    height: 216,
+    width: '100%',
+    marginVertical: 8,
+  },
   dateTimeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -654,10 +666,15 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#f9f9f9',
+    position: 'relative',
   },
   dateTimeText: {
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  dateTimePicker: {
+    height: 216,
+    width: '100%',
   },
   donePickerButton: {
     alignItems: 'center',

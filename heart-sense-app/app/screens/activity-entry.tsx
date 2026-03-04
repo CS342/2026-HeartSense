@@ -261,15 +261,18 @@ export default function ActivityEntry() {
                   <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
                 </TouchableOpacity>
                 {showPicker && (
-                  <DateTimePicker
-                    value={occurredAt}
-                    mode="datetime"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onPickerChange}
-                    maximumDate={new Date()}
-                    textColor='black'
-                    accentColor='black'
-                  />
+                  <View style={styles.dateTimePickerWrapper}>
+                    <DateTimePicker
+                      value={occurredAt}
+                      mode="datetime"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onPickerChange}
+                      maximumDate={new Date()}
+                      textColor="black"
+                      accentColor="black"
+                      style={styles.dateTimePicker}
+                    />
+                  </View>
                 )}
                 {Platform.OS === 'ios' && showPicker && (
                   <TouchableOpacity
@@ -420,6 +423,15 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#f9f9f9',
+  },
+  dateTimePickerWrapper: {
+    height: 216,
+    width: '100%',
+    marginVertical: 8,
+  },
+  dateTimePicker: {
+    height: 216,
+    width: '100%',
   },
   dateTimeText: {
     fontSize: 16,

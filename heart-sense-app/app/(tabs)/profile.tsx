@@ -661,18 +661,21 @@ export default function ProfileScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showDobPicker && (
-                    <DateTimePicker
-                      value={dobDate}
-                      mode="date"
-                      display={Platform.OS === "ios" ? "spinner" : "default"}
-                      onChange={onDobPickerChange}
-                      maximumDate={new Date()}
-                      minimumDate={
-                        new Date(new Date().setFullYear(new Date().getFullYear() - 120))
-                      }
-                      textColor='black'
-                      accentColor='black'
-                    />
+                    <View style={styles.dateTimePickerWrapper}>
+                      <DateTimePicker
+                        value={dobDate}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        onChange={onDobPickerChange}
+                        maximumDate={new Date()}
+                        minimumDate={
+                          new Date(new Date().setFullYear(new Date().getFullYear() - 120))
+                        }
+                        textColor="black"
+                        accentColor="black"
+                        style={styles.dateTimePicker}
+                      />
+                    </View>
                   )}
                   {Platform.OS === "ios" && showDobPicker && (
                     <TouchableOpacity
@@ -1090,6 +1093,15 @@ const styles = StyleSheet.create({
   genderOptionTextSelected: {
     color: theme.primary,
     fontWeight: "600",
+  },
+  dateTimePickerWrapper: {
+    height: 216,
+    width: "100%",
+    marginVertical: 8,
+  },
+  dateTimePicker: {
+    height: 216,
+    width: "100%",
   },
   donePickerButton: { alignItems: "center", paddingVertical: 12 },
   donePickerText: { fontSize: 16, color: theme.primary, fontWeight: "600" },
