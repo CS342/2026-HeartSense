@@ -5,7 +5,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { signup as fbSignup, login as fbLogin, resendVerification as fbResendVerification, reloadUser as fbReloadUser } from '@/lib/auth';
+import { signup as fbSignup, login as fbLogin, resetPassword as fbResetPassword, resendVerification as fbResendVerification, reloadUser as fbReloadUser } from '@/lib/auth';
 import {
   registerForPushNotificationsAsync,
   savePushTokenToBackend,
@@ -21,6 +21,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
   refreshUser: () => Promise<import('firebase/auth').User | null>;
   signOut: () => Promise<void>;
@@ -116,6 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fbLogin(email, password);
   };
 
+  const resetPassword = async (email: string) => {
+    await fbResetPassword(email);
+  };
+
   const signOut = async () => {
     await firebaseSignOut(auth);
   };
@@ -135,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signUp,
         signIn,
+        resetPassword,
         resendVerification,
         refreshUser,
         signOut,

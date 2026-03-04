@@ -15,17 +15,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
-export default function Login() {
+export default function ForgotPassword() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const { resetPassword } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Please fill in all fields');
+  const handleReset = async () => {
+    if (!email) {
+      setError('Please enter your email');
       return;
     }
 
@@ -33,10 +32,14 @@ export default function Login() {
     setError('');
 
     try {
-      await signIn(email, password);
-      router.replace('/');
+      await resetPassword(email);
+      Alert.alert(
+        'Email sent',
+        'If an account exists for that email, you will receive a password reset link shortly.'
+      );
+      router.replace('/auth/login');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      setError(err.message || 'Failed to send reset email');
     } finally {
       setLoading(false);
     }
@@ -55,8 +58,8 @@ export default function Login() {
           <View style={styles.iconContainer}>
             <Heart color={theme.primary} size={48} strokeWidth={2} />
           </View>
-          <Text style={styles.title}>Heart Sense</Text>
-          <Text style={styles.subtitle}>Track your health journey</Text>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>Enter your email to get a reset link.</Text>
         </View>
 
         <View style={styles.form}>
@@ -75,42 +78,21 @@ export default function Login() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              secureTextEntry
-              autoComplete="password"
-            />
-          </View>
-
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={handleReset}
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Sending...' : 'Send reset email'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => router.push('/auth/forgot-password')}
+            onPress={() => router.push('/auth/login')}
           >
-            <Text style={styles.linkText}>Forgot password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.push('/auth/signup')}
-          >
-            <Text style={styles.linkText}>
-              Don't have an account? Sign up
-            </Text>
+            <Text style={styles.linkText}>Back to login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -150,6 +132,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+    textAlign: 'center',
   },
   form: {
     width: '100%',

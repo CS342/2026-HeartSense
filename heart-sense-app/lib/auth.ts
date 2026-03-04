@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   reload,
   User,
   ActionCodeSettings,
@@ -55,6 +56,14 @@ export async function signup(email: string, password: string, fullName: string) 
 
 export async function login(email: string, password: string) {
   await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function resetPassword(email: string) {
+  const actionCodeSettings: ActionCodeSettings = {
+    url: process.env.EXPO_ACTION_URL || "http://localhost:19006",
+    handleCodeInApp: false,
+  };
+  await sendPasswordResetEmail(auth, email, actionCodeSettings);
 }
 
 export async function resendVerification(user?: User) {
