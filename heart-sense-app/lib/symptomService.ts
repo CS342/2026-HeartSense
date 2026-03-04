@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface SymptomVitalsContext {
@@ -424,6 +424,46 @@ export const getPreviousWellbeing = async (userId: string) => {
     };
   } catch (error: any) {
     return { data: null, error: error.message };
+  }
+};
+
+export const updateSymptom = async (id: string, fields: { severity?: number; description?: string }) => {
+  try {
+    const ref = doc(db, 'symptoms', id);
+    await updateDoc(ref, fields);
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to update symptom' };
+  }
+};
+
+export const updateActivity = async (id: string, fields: { durationMinutes?: number; intensity?: string; description?: string }) => {
+  try {
+    const ref = doc(db, 'activities', id);
+    await updateDoc(ref, fields);
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to update activity' };
+  }
+};
+
+export const updateWellbeingRating = async (id: string, fields: { energy_level?: number; mood_rating?: number; stress_level?: number; notes?: string }) => {
+  try {
+    const ref = doc(db, 'well_being_ratings', id);
+    await updateDoc(ref, fields);
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to update wellbeing rating' };
+  }
+};
+
+export const updateMedicalChange = async (id: string, fields: { description?: string }) => {
+  try {
+    const ref = doc(db, 'medical_conditions', id);
+    await updateDoc(ref, fields);
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to update medical change' };
   }
 };
 
