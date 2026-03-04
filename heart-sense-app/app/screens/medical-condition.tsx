@@ -153,95 +153,98 @@ export default function MedicalCondition() {
           keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            Use this form to report any changes in your medical condition, medications, or healthcare visits.
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Type of Change</Text>
-          <View style={styles.typeGrid}>
-            {CONDITION_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.typeButton,
-                  selectedType === type && styles.typeButtonSelected,
-                ]}
-                onPress={() => setSelectedType(type)}
-              >
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    selectedType === type && styles.typeButtonTextSelected,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              Use this form to report any changes in your medical condition, medications, or healthcare visits.
+            </Text>
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>When did this change occur?</Text>
-          <TouchableOpacity
-            style={styles.dateTimeButton}
-            onPress={() => setShowPicker(true)}
-            activeOpacity={0.7}
-          >
-            <Calendar color={theme.primary} size={20} />
-            <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={occurredAt}
-              mode="datetime"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onPickerChange}
-              maximumDate={new Date()}
-              textColor='black'
-              accentColor='black'
-            />
-          )}
-          {Platform.OS === 'ios' && showPicker && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Type of Change</Text>
+            <View style={styles.typeGrid}>
+              {CONDITION_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.typeButton,
+                    selectedType === type && styles.typeButtonSelected,
+                  ]}
+                  onPress={() => setSelectedType(type)}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      selectedType === type && styles.typeButtonTextSelected,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>When did this change occur?</Text>
             <TouchableOpacity
-              style={styles.donePickerButton}
-              onPress={() => setShowPicker(false)}
+              style={styles.dateTimeButton}
+              onPress={() => setShowPicker(true)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.donePickerText}>Done</Text>
+              <Calendar color={theme.primary} size={20} />
+              <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
             </TouchableOpacity>
-          )}
-        </View>
+            {showPicker && (
+              <View style={styles.dateTimePickerWrapper}>
+                <DateTimePicker
+                  value={occurredAt}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPickerChange}
+                  maximumDate={new Date()}
+                  textColor='black'
+                  accentColor='black'
+                  style={styles.dateTimePicker}
+                />
+              </View>
+            )}
+            {Platform.OS === 'ios' && showPicker && (
+              <TouchableOpacity
+                style={styles.donePickerButton}
+                onPress={() => setShowPicker(false)}
+              >
+                <Text style={styles.donePickerText}>Done</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-        <View ref={descriptionSectionRef} style={styles.section} collapsable={false}>
-          <Text style={styles.label}>Description *</Text>
-          <TextInput
-            style={styles.textArea}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Provide details about the change in your condition or treatment..."
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-            onFocus={() => { descriptionFocusedRef.current = true; }}
-            onBlur={() => { descriptionFocusedRef.current = false; }}
-          />
-          <Text style={styles.helperText}>
-            Include medication names, dosages, diagnoses, or other relevant details
-          </Text>
-        </View>
+          <View ref={descriptionSectionRef} style={styles.section} collapsable={false}>
+            <Text style={styles.label}>Description *</Text>
+            <TextInput
+              style={styles.textArea}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Provide details about the change in your condition or treatment..."
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              onFocus={() => { descriptionFocusedRef.current = true; }}
+              onBlur={() => { descriptionFocusedRef.current = false; }}
+            />
+            <Text style={styles.helperText}>
+              Include medication names, dosages, diagnoses, or other relevant details
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Saving...' : 'Log Change'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Saving...' : 'Log Change'}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -332,6 +335,14 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     backgroundColor: '#f9f9f9',
+  },
+  dateTimePickerWrapper: {
+    height: 260,
+  },
+  dateTimePicker: {
+    width: '100%',
+    height: 260,
+    marginTop: 10,
   },
   dateTimeText: {
     fontSize: 16,

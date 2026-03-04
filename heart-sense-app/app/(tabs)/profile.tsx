@@ -42,15 +42,12 @@ import {
   Bell,
   BarChart3,
   Info,
-  Send,
   Watch,
   Ruler,
   Scale,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
-import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
-import { sendPushNotificationCallable } from "@/lib/firebase";
+
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
 
@@ -131,7 +128,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [showDobPicker, setShowDobPicker] = useState(false);
-  const [sendingTestNotification, setSendingTestNotification] = useState(false);
   const [infoModal, setInfoModal] = useState<{
     visible: boolean;
     title: string;
@@ -441,68 +437,6 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  };
-
-  const handleSendTestNotification = async () => {
-    if (!user) return;
-    setSendingTestNotification(true);
-    try {
-      const { status: existing } = await Notifications.getPermissionsAsync();
-      let final = existing;
-      if (existing !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        final = status;
-      }
-      if (final !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Enable notifications in your device settings to receive test notifications."
-        );
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const projectId =
-        (Constants.expoConfig?.extra?.projectId as string | undefined)?.trim() ||
-        (Constants.expoConfig?.extra?.eas?.projectId as string | undefined)?.trim() ||
-        (Constants.easConfig?.projectId as string | undefined)?.trim();
-      if (!projectId) {
-        Alert.alert(
-          "Project ID required",
-          "Push notifications need your Expo project ID.\n\n1. Open https://expo.dev and open your project.\n2. Copy the Project ID from project settings.\n3. In heart-sense-app, create a .env file with:\nEXPO_PUBLIC_EAS_PROJECT_ID=your-project-id\n4. Restart the app (expo start --clear)."
-        );
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const tokenResult = await Notifications.getExpoPushTokenAsync({
-        projectId,
-      });
-      const token = tokenResult.data;
-      if (!token) {
-        Alert.alert("Error", "Could not get push token. Try restarting the app.");
-        setSendingTestNotification(false);
-        return;
-      }
-
-      const { data } = await sendPushNotificationCallable({
-        token,
-        title: "Daily Health Check-in",
-        body: "Take a moment to log how you're feeling today on Heart Sense.",
-      });
-
-      if (data.success) {
-        Alert.alert("Sent!", "Check your device for the test notification.");
-      } else {
-        Alert.alert("Send failed", data.error ?? "Unknown error");
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("Error sending test notification:", message);
-      Alert.alert("Error", message);
-    } finally {
-      setSendingTestNotification(false);
-    }
   };
 
   return (
