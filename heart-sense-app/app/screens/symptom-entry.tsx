@@ -12,7 +12,51 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Dimensions,
+  Animated,
 } from 'react-native';
+
+function BouncingText({ text, onDone }: { text: string; onDone: () => void }) {
+  const letters = text.split('');
+  const anims = useRef(letters.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const bounces = letters.map((_, i) =>
+      Animated.sequence([
+        Animated.spring(anims[i], { toValue: -10, useNativeDriver: true, speed: 40, bounciness: 10 }),
+        Animated.spring(anims[i], { toValue: 0, useNativeDriver: true, speed: 40, bounciness: 6 }),
+      ])
+    );
+    Animated.stagger(25, bounces).start(() => {
+      setTimeout(onDone, 100);
+    });
+  }, []);
+
+  return (
+    <View style={bounceStyles.row}>
+      {letters.map((char, i) => (
+        <Animated.Text
+          key={i}
+          style={[bounceStyles.letter, { transform: [{ translateY: anims[i] }] }]}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
+
+const bounceStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  letter: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
@@ -20,6 +64,14 @@ import { fetchVitalsAroundSymptom } from '@/services/healthkit/healthSyncService
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
+
+const SEVERITY_COLORS: Record<number, string> = {
+  1: '#22c55e',
+  2: '#84cc16',
+  3: '#eab308',
+  4: '#f97316',
+  5: '#ef4444',
+};
 
 const SYMPTOM_TYPES = [
   'Dizziness',
@@ -137,6 +189,7 @@ export default function SymptomEntry() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [previousSymptom, setPreviousSymptom] = useState<PreviousSymptom | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -280,12 +333,7 @@ export default function SymptomEntry() {
 
       if (error) throw new Error(error);
 
-      Alert.alert('Success', 'Symptom logged successfully');
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/');
-      }
+      setSubmitted(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log symptom');
     } finally {
@@ -419,34 +467,49 @@ export default function SymptomEntry() {
 
           <View style={styles.section}>
             <Text style={styles.label}>Severity (1-5)</Text>
-            <View style={styles.severityContainer}>
-              {[1, 2, 3, 4, 5].map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  style={[
-                    styles.severityButton,
-                    severity === num && styles.severityButtonSelected,
-                  ]}
-                  onPress={() => setSeverity(num)}
-                >
-                  <Text
+            {Platform.OS === 'web' ? (
+              <View>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={severity}
+                  onChange={(e: any) => setSeverity(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: SEVERITY_COLORS[severity], height: 6, cursor: 'pointer' }}
+                />
+                <View style={styles.severityLabels}>
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <Text key={num} style={[styles.severityLabel, { color: severity === num ? SEVERITY_COLORS[num] : '#bbb', fontWeight: severity === num ? '700' : '400' }]}>
+                      {num}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.severityContainer}>
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <TouchableOpacity
+                    key={num}
                     style={[
-                      styles.severityText,
-                      severity === num && styles.severityTextSelected,
+                      styles.severityButton,
+                      { borderColor: SEVERITY_COLORS[num] },
+                      severity === num && { backgroundColor: SEVERITY_COLORS[num], borderColor: SEVERITY_COLORS[num] },
                     ]}
+                    onPress={() => setSeverity(num)}
                   >
-                    {num}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {selectedType && (
-              <View style={styles.severityDescriptionBox}>
-                <Text style={styles.severityDescriptionText}>
-                  {getSeverityDescription()}
-                </Text>
+                    <Text style={[styles.severityText, { color: severity === num ? '#fff' : SEVERITY_COLORS[num] }]}>
+                      {num}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
+            <View style={[styles.severityDescriptionBox, { borderColor: SEVERITY_COLORS[severity], backgroundColor: SEVERITY_COLORS[severity] + '18' }]}>
+              <Text style={[styles.severityDescriptionText, { color: SEVERITY_COLORS[severity] }]}>
+                {selectedType ? getSeverityDescription() : 'Select a symptom type to see description'}
+              </Text>
+            </View>
           </View>
 
           <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
@@ -464,10 +527,22 @@ export default function SymptomEntry() {
             />
           </View>
 
+          {submitted && (
+            <View style={styles.successBanner}>
+              <BouncingText
+                text="Symptom Logged!"
+                onDone={() => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/');
+                }}
+              />
+            </View>
+          )}
+
           <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            style={[styles.submitButton, (loading || submitted) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || submitted}
           >
             <Text style={styles.submitButtonText}>
               {loading ? 'Saving...' : 'Log Symptom'}
@@ -570,17 +645,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  severityLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingHorizontal: 2,
+  },
+  severityLabel: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
   severityDescriptionBox: {
     marginTop: 16,
     padding: 14,
-    backgroundColor: theme.primaryLight,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.primary,
   },
   severityDescriptionText: {
     fontSize: 15,
-    color: theme.primary,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -675,6 +757,14 @@ const styles = StyleSheet.create({
   dateTimePicker: {
     height: 216,
     width: '100%',
+  },
+  successBanner: {
+    backgroundColor: theme.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   donePickerButton: {
     alignItems: 'center',

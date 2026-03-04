@@ -11,11 +11,16 @@ export default function TabLayout() {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#e5e5e5',
+          borderTopWidth: 0,
+          backgroundColor: '#fff',
           height: Platform.OS === 'ios' ? 88 : 72,
           paddingBottom: Platform.OS === 'ios' ? 24 : 12,
           paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,

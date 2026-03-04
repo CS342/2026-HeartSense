@@ -49,7 +49,10 @@ import {
   Check,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
-
+import AppLogo from "@/components/AppLogo";
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import { sendPushNotificationCallable } from "@/lib/firebase";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
 
@@ -489,6 +492,7 @@ export default function ProfileScreen() {
       </Modal>
 
       <View style={styles.header}>
+        <AppLogo size="small" showTitle={true} variant="light" />
         <Text style={styles.title}>Profile</Text>
       </View>
 
@@ -956,12 +960,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9fafb" },
   header: {
     padding: 24,
-    paddingTop: 32,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e5e5",
+    paddingTop: 20,
+    paddingBottom: 20,
+    backgroundColor: theme.primary,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  title: { fontSize: 32, fontWeight: "700", color: "#1a1a1a" },
+  title: { fontSize: 26, fontWeight: "700", color: "#fff", flex: 1, textAlign: 'right' },
   scrollView: { flex: 1 },
   avatarContainer: {
     alignItems: "center",

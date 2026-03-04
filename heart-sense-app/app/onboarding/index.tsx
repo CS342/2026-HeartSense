@@ -14,7 +14,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { Heart, ClipboardList, Watch, Calendar, User, ChevronRight, Ruler, Scale } from 'lucide-react-native';
+import { ClipboardList, Watch, Calendar, User, ChevronRight, Ruler, Scale } from 'lucide-react-native';
+import AppLogo from '@/components/AppLogo';
 import { theme } from '@/theme/colors';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -124,14 +125,9 @@ export default function OnboardingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Heart color={theme.primary} size={48} strokeWidth={2} />
-          </View>
+          <AppLogo size="medium" showTitle={true} subtitle={page === 1 ? 'Step 1 of 2' : 'Step 2 of 2'} />
           <Text style={styles.title}>
-            {page === 1 ? 'Welcome to Heart Sense' : 'Personal Information'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {page === 1 ? 'Step 1 of 2' : 'Step 2 of 2'}
+            {page === 1 ? 'Welcome to HeartSense' : 'Personal Information'}
           </Text>
         </View>
 
@@ -204,22 +200,15 @@ export default function OnboardingScreen() {
               <Text style={styles.bodyText}>
                 Please provide your date of birth. This is required for the study.
               </Text>
-              <TouchableOpacity
-                style={styles.fieldButton}
-                onPress={() => setShowDobPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={dateOfBirth ? styles.fieldButtonText : styles.fieldButtonPlaceholder}>
-                  {dateOfBirth
-                    ? (parseLocalDate(dateOfBirth) ?? new Date()).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                    : 'Tap to select date of birth'}
-                </Text>
-              </TouchableOpacity>
-              {showDobPicker && (
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={[styles.input, { marginTop: 12 }]}
+                  value={dateOfBirth || ''}
+                  onChangeText={setDateOfBirth}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#999"
+                />
+              ) : (
                 <>
                   <DateTimePicker
                     value={dobDate}
@@ -347,25 +336,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: theme.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 4,
+    marginTop: 8,
     textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
   },
   section: {
     marginBottom: 28,

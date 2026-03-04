@@ -12,7 +12,52 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Dimensions,
+  Animated,
 } from 'react-native';
+
+function WaveText({ text, onDone }: { text: string; onDone: () => void }) {
+  const letters = text.split('');
+  const anims = useRef(letters.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const waves = letters.map((_, i) =>
+      Animated.sequence([
+        Animated.spring(anims[i], { toValue: -18, useNativeDriver: true, speed: 30, bounciness: 20 }),
+        Animated.spring(anims[i], { toValue: 4, useNativeDriver: true, speed: 20, bounciness: 8 }),
+        Animated.spring(anims[i], { toValue: 0, useNativeDriver: true, speed: 30, bounciness: 4 }),
+      ])
+    );
+    Animated.stagger(25, waves).start(() => {
+      setTimeout(onDone, 100);
+    });
+  }, []);
+
+  return (
+    <View style={waveStyles.row}>
+      {letters.map((char, i) => (
+        <Animated.Text
+          key={i}
+          style={[waveStyles.letter, { transform: [{ translateY: anims[i] }] }]}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
+
+const waveStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  letter: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logActivity } from '@/lib/symptomService';
@@ -49,6 +94,7 @@ export default function ActivityEntry() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const textAreaSectionRef = useRef<View>(null);
@@ -143,12 +189,7 @@ export default function ActivityEntry() {
 
       if (error) throw new Error(error);
 
-      Alert.alert('Success', 'Activity logged successfully');
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/');
-      }
+      setSubmitted(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log activity');
     } finally {
@@ -314,10 +355,22 @@ export default function ActivityEntry() {
             />
           </View>
 
+          {submitted && (
+            <View style={styles.successBanner}>
+              <WaveText
+                text="Activity Logged!"
+                onDone={() => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/');
+                }}
+              />
+            </View>
+          )}
+
           <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            style={[styles.submitButton, (loading || submitted) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || submitted}
           >
             <Text style={styles.submitButtonText}>
               {loading ? 'Saving...' : 'Log Activity'}
@@ -462,6 +515,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
     minHeight: 120,
+  },
+  successBanner: {
+    backgroundColor: '#059669',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   submitButton: {
     backgroundColor: theme.primary,

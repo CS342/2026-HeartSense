@@ -26,6 +26,14 @@ interface TimelineEntry {
   details?: any;
 }
 
+const SEVERITY_COLORS: Record<number, string> = {
+  1: '#22c55e',
+  2: '#84cc16',
+  3: '#eab308',
+  4: '#f97316',
+  5: '#ef4444',
+};
+
 const FILTER_OPTIONS: { key: EntryType; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'symptom', label: 'Symptoms' },
@@ -312,6 +320,9 @@ export default function HistoryScreen() {
               >
                 <View style={[styles.iconContainer, { backgroundColor: getBackgroundColor(entry.type) }]}>
                   {getIcon(entry.type)}
+                  {entry.type === 'symptom' && entry.details?.severity != null && (
+                    <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[entry.details.severity] }]} />
+                  )}
                 </View>
                 <View style={styles.entryContent}>
                   <Text style={styles.entryTitle}>{entry.title}</Text>
@@ -462,6 +473,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  severityDot: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   entryContent: {
     flex: 1,

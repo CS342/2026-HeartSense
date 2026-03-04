@@ -12,7 +12,30 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Dimensions,
+  Animated,
 } from 'react-native';
+
+function QuickBounce({ text, color, onDone }: { text: string; color: string; onDone: () => void }) {
+  const letters = text.split('');
+  const anims = useRef(letters.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    Animated.stagger(25, letters.map((_, i) =>
+      Animated.sequence([
+        Animated.spring(anims[i], { toValue: -10, useNativeDriver: true, speed: 50, bounciness: 8 }),
+        Animated.spring(anims[i], { toValue: 0, useNativeDriver: true, speed: 50, bounciness: 4 }),
+      ])
+    )).start(() => setTimeout(onDone, 100));
+  }, []);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {letters.map((char, i) => (
+        <Animated.Text key={i} style={{ fontSize: 18, fontWeight: '700', color, transform: [{ translateY: anims[i] }] }}>
+          {char === ' ' ? '\u00A0' : char}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logMedicalChange } from '@/lib/symptomService';
@@ -40,6 +63,7 @@ export default function MedicalCondition() {
   const [occurredAt, setOccurredAt] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const descriptionSectionRef = useRef<View>(null);
@@ -120,8 +144,7 @@ export default function MedicalCondition() {
 
       if (error) throw new Error(error);
 
-      Alert.alert('Success', 'Medical condition change logged successfully');
-      router.back();
+      setSubmitted(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to log condition change');
     } finally {
@@ -236,15 +259,24 @@ export default function MedicalCondition() {
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Saving...' : 'Log Change'}
-            </Text>
-          </TouchableOpacity>
+        {submitted && (
+          <View style={styles.successBanner}>
+            <QuickBounce
+              text="Change Logged!"
+              color="#fff"
+              onDone={() => { if (router.canGoBack()) router.back(); else router.replace('/'); }}
+            />
+          </View>
+        )}
+        <TouchableOpacity
+          style={[styles.submitButton, (loading || submitted) && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading || submitted}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Saving...' : 'Log Change'}
+          </Text>
+        </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -369,6 +401,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 8,
+  },
+  successBanner: {
+    backgroundColor: '#b45309',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   submitButton: {
     backgroundColor: theme.primary,

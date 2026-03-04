@@ -18,8 +18,8 @@ export default function Index() {
       return;
     }
 
-    // Send to onboarding if not completed (false) or unknown (null - e.g. legacy user or fetch error)
-    if (onboardingCompleted !== true) {
+    // Only send to onboarding if explicitly not completed
+    if (onboardingCompleted === false) {
       router.replace('/onboarding');
       return;
     }

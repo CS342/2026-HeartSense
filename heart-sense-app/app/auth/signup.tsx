@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+import AppLogo from '@/components/AppLogo';
 
 export default function Signup() {
   const [fullName, setFullName] = useState('');
@@ -94,11 +94,7 @@ export default function Signup() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Heart color={theme.primary} size={48} strokeWidth={2} />
-          </View>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join us in tracking your health</Text>
+          <AppLogo size="large" showTitle={true} subtitle="Clinical Study" />
         </View>
 
         <View style={styles.form}>
@@ -223,25 +219,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 48,
-  },
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: theme.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
   },
   form: {
     width: '100%',
