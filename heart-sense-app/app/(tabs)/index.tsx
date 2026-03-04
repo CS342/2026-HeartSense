@@ -212,7 +212,7 @@ export default function HomeScreen() {
           <AppLogo size="small" showTitle={true} variant="light" />
           <View style={styles.headerContent}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.greeting} numberOfLines={1}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
+              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
               <Text style={styles.subtitle}>How are you feeling today?</Text>
             </View>
             <View style={styles.headerRight}>
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   greeting: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 4,

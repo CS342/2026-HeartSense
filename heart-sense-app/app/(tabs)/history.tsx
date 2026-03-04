@@ -9,10 +9,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges } from '@/lib/symptomService';
-import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight } from 'lucide-react-native';
+import {
+  getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges,
+  updateSymptom, updateActivity, updateWellbeingRating, updateMedicalChange,
+} from '@/lib/symptomService';
+import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight, Pencil, Save } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
 type EntryType = 'all' | 'symptom' | 'wellbeing' | 'activity' | 'medical';
@@ -48,6 +53,78 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<EntryType>('all');
   const [selectedEntry, setSelectedEntry] = useState<TimelineEntry | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFields, setEditFields] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
+
+  const startEditing = (entry: TimelineEntry) => {
+    const d = entry.details;
+    switch (entry.type) {
+      case 'symptom':
+        setEditFields({ severity: d.severity, description: d.description || '' });
+        break;
+      case 'activity':
+        setEditFields({ durationMinutes: d.durationMinutes, intensity: d.intensity, description: d.description || '' });
+        break;
+      case 'wellbeing':
+        setEditFields({ energyLevel: d.energyLevel, moodRating: d.moodRating, stressLevel: d.stressLevel, notes: d.notes || '' });
+        break;
+      case 'medical':
+        setEditFields({ description: d.description || '' });
+        break;
+    }
+    setIsEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!selectedEntry) return;
+    setSaving(true);
+    let result: { error: string | null } = { error: null };
+
+    switch (selectedEntry.type) {
+      case 'symptom':
+        result = await updateSymptom(selectedEntry.id, {
+          severity: editFields.severity,
+          description: editFields.description,
+        });
+        break;
+      case 'activity':
+        result = await updateActivity(selectedEntry.id, {
+          durationMinutes: editFields.durationMinutes,
+          intensity: editFields.intensity,
+          description: editFields.description,
+        });
+        break;
+      case 'wellbeing':
+        result = await updateWellbeingRating(selectedEntry.id, {
+          energy_level: editFields.energyLevel,
+          mood_rating: editFields.moodRating,
+          stress_level: editFields.stressLevel,
+          notes: editFields.notes,
+        });
+        break;
+      case 'medical':
+        result = await updateMedicalChange(selectedEntry.id, {
+          description: editFields.description,
+        });
+        break;
+    }
+
+    setSaving(false);
+    if (result.error) {
+      Alert.alert('Error', result.error);
+    } else {
+      setIsEditing(false);
+      setSelectedEntry(null);
+      loadHistory();
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedEntry(null);
+    setIsEditing(false);
+    setEditFields({});
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -264,6 +341,117 @@ export default function HistoryScreen() {
     }
   };
 
+  const renderEditContent = (entry: TimelineEntry) => {
+    switch (entry.type) {
+      case 'symptom':
+        return (
+          <>
+            <Text style={styles.editLabel}>Severity (1–5)</Text>
+            <View style={styles.severityRow}>
+              {[1, 2, 3, 4, 5].map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.severityButton, editFields.severity === v && styles.severityButtonActive]}
+                  onPress={() => setEditFields({ ...editFields, severity: v })}
+                >
+                  <Text style={[styles.severityButtonText, editFields.severity === v && styles.severityButtonTextActive]}>{v}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.editLabel}>Description</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editFields.description}
+              onChangeText={(t) => setEditFields({ ...editFields, description: t })}
+              multiline
+              placeholder="Optional details..."
+            />
+          </>
+        );
+      case 'activity':
+        return (
+          <>
+            <Text style={styles.editLabel}>Duration (minutes)</Text>
+            <TextInput
+              style={styles.editInputShort}
+              value={String(editFields.durationMinutes ?? '')}
+              onChangeText={(t) => setEditFields({ ...editFields, durationMinutes: parseInt(t) || 0 })}
+              keyboardType="number-pad"
+            />
+            <Text style={styles.editLabel}>Intensity</Text>
+            <View style={styles.severityRow}>
+              {['low', 'moderate', 'high'].map((v) => (
+                <TouchableOpacity
+                  key={v}
+                  style={[styles.intensityButton, editFields.intensity === v && styles.severityButtonActive]}
+                  onPress={() => setEditFields({ ...editFields, intensity: v })}
+                >
+                  <Text style={[styles.severityButtonText, editFields.intensity === v && styles.severityButtonTextActive]}>
+                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.editLabel}>Description</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editFields.description}
+              onChangeText={(t) => setEditFields({ ...editFields, description: t })}
+              multiline
+              placeholder="Optional details..."
+            />
+          </>
+        );
+      case 'wellbeing':
+        return (
+          <>
+            {(['energyLevel', 'moodRating', 'stressLevel'] as const).map((field) => {
+              const label = field === 'energyLevel' ? 'Energy' : field === 'moodRating' ? 'Mood' : 'Stress';
+              return (
+                <View key={field}>
+                  <Text style={styles.editLabel}>{label} (1–5)</Text>
+                  <View style={styles.severityRow}>
+                    {[1, 2, 3, 4, 5].map((v) => (
+                      <TouchableOpacity
+                        key={v}
+                        style={[styles.severityButton, editFields[field] === v && styles.severityButtonActive]}
+                        onPress={() => setEditFields({ ...editFields, [field]: v })}
+                      >
+                        <Text style={[styles.severityButtonText, editFields[field] === v && styles.severityButtonTextActive]}>{v}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
+            <Text style={styles.editLabel}>Notes</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editFields.notes}
+              onChangeText={(t) => setEditFields({ ...editFields, notes: t })}
+              multiline
+              placeholder="Optional notes..."
+            />
+          </>
+        );
+      case 'medical':
+        return (
+          <>
+            <Text style={styles.editLabel}>Description</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editFields.description}
+              onChangeText={(t) => setEditFields({ ...editFields, description: t })}
+              multiline
+              placeholder="Describe the change..."
+            />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -342,7 +530,7 @@ export default function HistoryScreen() {
         visible={selectedEntry !== null}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedEntry(null)}
+        onRequestClose={closeModal}
       >
         {selectedEntry && (
           <SafeAreaView style={styles.modalContainer}>
@@ -353,15 +541,28 @@ export default function HistoryScreen() {
                 </View>
                 <Text style={styles.modalType}>{getTypeLabel(selectedEntry.type)}</Text>
               </View>
-              <TouchableOpacity onPress={() => setSelectedEntry(null)} style={styles.modalClose}>
-                <X color="#666" size={24} />
-              </TouchableOpacity>
+              <View style={styles.modalHeaderRight}>
+                {!isEditing ? (
+                  <TouchableOpacity onPress={() => startEditing(selectedEntry)} style={styles.editButton}>
+                    <Pencil color={theme.primary} size={18} />
+                    <Text style={styles.editButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={saveEdit} style={styles.saveButton} disabled={saving}>
+                    <Save color="#fff" size={18} />
+                    <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={closeModal} style={styles.modalClose}>
+                  <X color="#666" size={24} />
+                </TouchableOpacity>
+              </View>
             </View>
             <ScrollView style={styles.modalContent}>
               <Text style={styles.modalTitle}>{selectedEntry.title}</Text>
               <Text style={styles.modalTimestamp}>{formatFullDate(selectedEntry.timestamp)}</Text>
               <View style={styles.detailDivider} />
-              {renderDetailContent(selectedEntry)}
+              {isEditing ? renderEditContent(selectedEntry) : renderDetailContent(selectedEntry)}
             </ScrollView>
           </SafeAreaView>
         )}
@@ -535,6 +736,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  modalHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.primary,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.primary,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: theme.primary,
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
   modalClose: {
     padding: 4,
   },
@@ -592,5 +827,69 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1a1a1a',
     marginBottom: 4,
+  },
+  editLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1a1a1a',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  editInputShort: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1a1a1a',
+    width: 100,
+  },
+  severityRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  severityButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  severityButtonActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  severityButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  severityButtonTextActive: {
+    color: '#fff',
+  },
+  intensityButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
   },
 });
