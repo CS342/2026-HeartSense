@@ -51,6 +51,13 @@ type LatestWellbeing = {
   stressLevel: number;
 } | null;
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function timeAgo(isoDate: string | null): string {
   if (!isoDate) return 'Not synced';
   const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -204,8 +211,8 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <AppLogo size="small" showTitle={true} variant="light" />
           <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.greeting}>Good day{firstName ? `, ${firstName}` : ''}!</Text>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.greeting} numberOfLines={1}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
               <Text style={styles.subtitle}>How are you feeling today?</Text>
             </View>
             <View style={styles.headerRight}>
