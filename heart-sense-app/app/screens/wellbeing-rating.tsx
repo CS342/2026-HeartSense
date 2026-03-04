@@ -12,7 +12,30 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Dimensions,
+  Animated,
 } from 'react-native';
+
+function QuickBounce({ text, color, onDone }: { text: string; color: string; onDone: () => void }) {
+  const letters = text.split('');
+  const anims = useRef(letters.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    Animated.stagger(25, letters.map((_, i) =>
+      Animated.sequence([
+        Animated.spring(anims[i], { toValue: -10, useNativeDriver: true, speed: 50, bounciness: 8 }),
+        Animated.spring(anims[i], { toValue: 0, useNativeDriver: true, speed: 50, bounciness: 4 }),
+      ])
+    )).start(() => setTimeout(onDone, 100));
+  }, []);
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+      {letters.map((char, i) => (
+        <Animated.Text key={i} style={{ fontSize: 18, fontWeight: '700', color, transform: [{ translateY: anims[i] }] }}>
+          {char === ' ' ? '\u00A0' : char}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
@@ -51,6 +74,7 @@ export default function WellbeingRating() {
   const [moodRating, setMoodRating] = useState(3);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [previousRating, setPreviousRating] = useState<{
     energyLevel: number;
     moodRating: number;
@@ -137,8 +161,7 @@ export default function WellbeingRating() {
 
       if (error) throw new Error(error);
 
-      Alert.alert('Success', 'Well-being rating saved successfully');
-      router.back();
+      setSubmitted(true);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to save rating');
     } finally {
@@ -299,10 +322,19 @@ export default function WellbeingRating() {
           />
         </View>
 
+        {submitted && (
+          <View style={styles.successBanner}>
+            <QuickBounce
+              text="Rating Saved!"
+              color="#fff"
+              onDone={() => { if (router.canGoBack()) router.back(); else router.replace('/'); }}
+            />
+          </View>
+        )}
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          style={[styles.submitButton, (loading || submitted) && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={loading || submitted}
         >
           <Text style={styles.submitButtonText}>
             {loading ? 'Saving...' : 'Save Rating'}
@@ -444,6 +476,14 @@ const styles = StyleSheet.create({
   previousDate: {
     fontSize: 13,
     color: '#1e40af',
+  },
+  successBanner: {
+    backgroundColor: '#7c3aed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   submitButton: {
     backgroundColor: theme.primary,
