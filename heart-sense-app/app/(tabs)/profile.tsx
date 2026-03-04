@@ -871,17 +871,6 @@ export default function ProfileScreen() {
               placeholder="100"
             />
           </View>
-
-          <TouchableOpacity
-            style={styles.testNotificationButton}
-            onPress={handleSendTestNotification}
-            disabled={sendingTestNotification}
-          >
-            <Send color="#fff" size={20} />
-            <Text style={styles.testNotificationButtonText}>
-              {sendingTestNotification ? "Sending…" : "Send test notification"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
