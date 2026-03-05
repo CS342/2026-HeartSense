@@ -42,6 +42,15 @@ import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
 import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
+// Shared color scale: 1 = green → 5 = red
+const RATING_COLORS: Record<number, string> = {
+  1: '#dc2626',
+  2: '#ea580c',
+  3: '#eab308',
+  4: '#65a30d',
+  5: '#16a34a',
+};
+
 const ENERGY_LEVELS = [
   { value: 1, label: 'Very low', description: 'Barely able to get through the day' },
   { value: 2, label: 'Low', description: 'Tired, need more rest' },
@@ -229,7 +238,10 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  energyLevel === item.value && styles.scaleButtonSelected,
+                  energyLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setEnergyLevel(item.value)}
               >
@@ -244,7 +256,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedEnergy?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[energyLevel] }]}>{selectedEnergy?.label}</Text>
         </View>
 
         <View style={styles.section}>
@@ -259,7 +271,10 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  stressLevel === item.value && styles.scaleButtonSelected,
+                  stressLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setStressLevel(item.value)}
               >
@@ -274,7 +289,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedStress?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[stressLevel] }]}>{selectedStress?.label}</Text>
         </View>
 
         <View style={styles.section}>
@@ -289,7 +304,10 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  moodRating === item.value && styles.scaleButtonSelected,
+                  moodRating === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setMoodRating(item.value)}
               >
@@ -304,7 +322,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedMood?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[moodRating] }]}>{selectedMood?.label}</Text>
         </View>
 
         <View ref={notesSectionRef} style={styles.section} collapsable={false}>
@@ -408,10 +426,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     alignItems: 'center',
   },
-  scaleButtonSelected: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
-  },
   scaleButtonText: {
     fontSize: 18,
     fontWeight: '600',
@@ -422,7 +436,6 @@ const styles = StyleSheet.create({
   },
   scaleLabel: {
     fontSize: 13,
-    color: theme.primary,
     fontWeight: '500',
     marginTop: 8,
     textAlign: 'center',
