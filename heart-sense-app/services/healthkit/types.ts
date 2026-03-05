@@ -17,6 +17,7 @@ export const HK_IDENTIFIERS = {
   heartRateVariability: 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
   respiratoryRate: 'HKQuantityTypeIdentifierRespiratoryRate',
   stepCount: 'HKQuantityTypeIdentifierStepCount',
+  highHeartRateEvent: 'HKCategoryTypeIdentifierHighHeartRateEvent',
 } as const;
 
 export type HKIdentifierKey = keyof typeof HK_IDENTIFIERS;
