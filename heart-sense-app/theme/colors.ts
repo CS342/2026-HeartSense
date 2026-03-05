@@ -16,3 +16,44 @@ export const theme = {
 } as const;
 
 export type ThemeColors = typeof theme;
+
+/** Surface / text colors for light and dark modes */
+export const lightColors = {
+  background: '#f9fafb',
+  surface: '#ffffff',
+  surfaceSecondary: '#f5f3ff',
+  text: '#1a1a1a',
+  textSecondary: '#666666',
+  textTertiary: '#999999',
+  border: '#e5e5e5',
+  headerBg: theme.primary,
+  headerText: '#ffffff',
+  tabBar: '#ffffff',
+  tabBarBorder: 'transparent',
+  cardBg: '#ffffff',
+  inputBg: '#f9fafb',
+  modalBg: '#ffffff',
+  overlay: 'rgba(0,0,0,0.5)',
+  shadowColor: '#000',
+};
+
+export const darkColors = {
+  background: '#121212',
+  surface: '#1e1e1e',
+  surfaceSecondary: '#1a1a2e',
+  text: '#e0e0e0',
+  textSecondary: '#a0a0a0',
+  textTertiary: '#707070',
+  border: '#333333',
+  headerBg: '#1e1e1e',
+  headerText: '#e0e0e0',
+  tabBar: '#1e1e1e',
+  tabBarBorder: '#333333',
+  cardBg: '#2a2a2a',
+  inputBg: '#2a2a2a',
+  modalBg: '#1e1e1e',
+  overlay: 'rgba(0,0,0,0.7)',
+  shadowColor: '#000',
+};
+
+export type AppColors = typeof lightColors;

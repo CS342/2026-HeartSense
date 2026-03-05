@@ -47,8 +47,11 @@ import {
   Scale,
   Pencil,
   Check,
+  Moon,
+  Type,
 } from "lucide-react-native";
 import { theme } from "@/theme/colors";
+import { useTheme } from "@/contexts/ThemeContext";
 import AppLogo from "@/components/AppLogo";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
@@ -102,9 +105,16 @@ function parseLocalDate(isoDateStr: string): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
+const FONT_SIZES = [
+  { label: 'Small', scale: 0.85 },
+  { label: 'Medium', scale: 1.0 },
+  { label: 'Large', scale: 1.2 },
+] as const;
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const { isDark, toggleDarkMode, colors, fontScale, setFontScale, fs } = useTheme();
 
   const [profile, setProfile] = useState<Profile>({
     full_name: "",
@@ -462,19 +472,19 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Modal
         visible={infoModal.visible}
         transparent
         animationType="fade"
         onRequestClose={closeInfoModal}
       >
-        <Pressable style={styles.modalOverlay} onPress={closeInfoModal}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{infoModal.title}</Text>
+        <Pressable style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} onPress={closeInfoModal}>
+          <Pressable style={[styles.modalContent, { backgroundColor: colors.modalBg }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontSize: fs(18) }]}>{infoModal.title}</Text>
               <TouchableOpacity onPress={closeInfoModal} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Text style={styles.modalClose}>✕</Text>
+                <Text style={[styles.modalClose, { color: colors.textSecondary }]}>✕</Text>
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -482,7 +492,7 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.modalScrollContent}
               showsVerticalScrollIndicator={true}
             >
-              <Text style={styles.modalBody}>{infoModal.content}</Text>
+              <Text style={[styles.modalBody, { color: colors.text, fontSize: fs(15) }]}>{infoModal.content}</Text>
             </ScrollView>
             <TouchableOpacity style={styles.modalButton} onPress={closeInfoModal}>
               <Text style={styles.modalButtonText}>Close</Text>
@@ -491,40 +501,40 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: isDark ? colors.surface : theme.primary }]}>
         <AppLogo size="small" showTitle={true} variant="light" />
-        <Text style={styles.title}>Profile</Text>
+        <Text style={[styles.title, { fontSize: fs(26) }]}>Profile</Text>
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <View style={styles.avatarContainer}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.surface }]}>
           <View style={styles.avatar}>
             <User color={theme.primary} size={48} />
           </View>
-          <Text style={styles.userName}>{profile.full_name || "User"}</Text>
-          <Text style={styles.userEmail}>{profile.email}</Text>
+          <Text style={[styles.userName, { color: colors.text, fontSize: fs(24) }]}>{profile.full_name || "User"}</Text>
+          <Text style={[styles.userEmail, { color: colors.textSecondary, fontSize: fs(14) }]}>{profile.email}</Text>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
             <BarChart3 color={theme.primary} size={20} />
-            <Text style={styles.sectionTitle}>Account Summary</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>Account Summary</Text>
           </View>
 
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{stats.totalEntries}</Text>
-              <Text style={styles.statLabel}>Total Entries</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <Text style={[styles.statValue, { fontSize: fs(28) }]}>{stats.totalEntries}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Total Entries</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{stats.daysActive}</Text>
-              <Text style={styles.statLabel}>Days Active</Text>
+            <View style={[styles.statBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <Text style={[styles.statValue, { fontSize: fs(28) }]}>{stats.daysActive}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Days Active</Text>
             </View>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Member Since</Text>
-            <Text style={styles.infoValue}>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontSize: fs(14) }]}>Member Since</Text>
+            <Text style={[styles.infoValue, { color: colors.text, fontSize: fs(14) }]}>
               {stats.joinedDate
                 ? new Date(stats.joinedDate).toLocaleDateString("en-US", {
                   month: "long",
@@ -534,9 +544,9 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Last Activity</Text>
-            <Text style={styles.infoValue}>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontSize: fs(14) }]}>Last Activity</Text>
+            <Text style={[styles.infoValue, { color: colors.text, fontSize: fs(14) }]}>
               {stats.lastActivity
                 ? new Date(stats.lastActivity).toLocaleDateString("en-US", {
                   month: "short",
@@ -548,52 +558,52 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
             <User color={theme.primary} size={20} />
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>Personal Information</Text>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <User color="#666" size={20} />
+              <User color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Full Name</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Full Name</Text>
               {editing ? (
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBg }]}
                   value={profile.full_name}
                   onChangeText={(text) =>
                     setProfile({ ...profile, full_name: text })
                   }
                   placeholder="Enter your full name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textTertiary}
                 />
               ) : (
-                <Text style={styles.fieldValue}>
+                <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>
                   {profile.full_name || "Not set"}
                 </Text>
               )}
             </View>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <Mail color="#666" size={20} />
+              <Mail color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <Text style={styles.fieldValue}>{profile.email}</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Email</Text>
+              <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>{profile.email}</Text>
             </View>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <Calendar color="#666" size={20} />
+              <Calendar color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Date of Birth</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Date of Birth</Text>
               {editing ? (
                 <>
                   <TouchableOpacity
@@ -660,12 +670,12 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <User color="#666" size={20} />
+              <User color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Gender</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Gender</Text>
               {editing ? (
                 <View style={styles.genderRow}>
                   {GENDER_OPTIONS.map((opt) => (
@@ -696,12 +706,12 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <Ruler color="#666" size={20} />
+              <Ruler color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Height (cm)</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Height (cm)</Text>
               {editing ? (
                 <TextInput
                   style={styles.input}
@@ -721,12 +731,12 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          <View style={styles.field}>
+          <View style={[styles.field, { borderBottomColor: colors.border }]}>
             <View style={styles.fieldIcon}>
-              <Scale color="#666" size={20} />
+              <Scale color={colors.textSecondary} size={20} />
             </View>
             <View style={styles.fieldContent}>
-              <Text style={styles.fieldLabel}>Weight (kg)</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Weight (kg)</Text>
               {editing ? (
                 <TextInput
                   style={styles.input}
@@ -747,16 +757,16 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
             <Bell color={theme.primary} size={20} />
-            <Text style={styles.sectionTitle}>Notification Settings</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>Notification Settings</Text>
           </View>
 
-          <View style={styles.settingRow}>
+          <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Daily Reminders</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingTitle, { color: colors.text, fontSize: fs(15) }]}>Daily Reminders</Text>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary, fontSize: fs(13) }]}>
                 Get reminded to log your daily health entries
               </Text>
             </View>
@@ -772,48 +782,10 @@ export default function ProfileScreen() {
             />
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Health Insights</Text>
-              <Text style={styles.settingDescription}>
-                Receive personalized health tips and insights
-              </Text>
-            </View>
-            <Switch
-              value={notifications.notify_health_insights}
-              onValueChange={(value) =>
-                updateNotificationPreference("notify_health_insights", value)
-              }
-              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
-              thumbColor={
-                notifications.notify_health_insights ? theme.primary : "#f4f3f4"
-              }
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Activity Milestones</Text>
-              <Text style={styles.settingDescription}>
-                Celebrate your progress and achievements
-              </Text>
-            </View>
-            <Switch
-              value={notifications.notify_activity_milestones}
-              onValueChange={(value) =>
-                updateNotificationPreference("notify_activity_milestones", value)
-              }
-              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
-              thumbColor={
-                notifications.notify_activity_milestones ? theme.primary : "#f4f3f4"
-              }
-            />
-          </View>
-
-          <View style={styles.settingRow}>
+          <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
             <View style={styles.settingContent}>
               <View style={styles.settingTitleRow}>
-                <Text style={styles.settingTitle}>Elevated Heart Rate</Text>
+                <Text style={[styles.settingTitle, { color: colors.text, fontSize: fs(15) }]}>Elevated Heart Rate</Text>
                 {editingElevatedHrThreshold ? (
                   <TouchableOpacity
                     style={[
@@ -833,11 +805,11 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary, fontSize: fs(13) }]}>
                 You'll be notified when an elevated heart rate is detected so you can log a symptom.
               </Text>
               <View style={styles.settingRowContent}>
-                <Text style={styles.settingLabel}>Notify when at or above (bpm): </Text>
+                <Text style={[styles.settingLabel, { color: colors.text, fontSize: fs(14) }]}>Notify when at or above (bpm): </Text>
                 {editingElevatedHrThreshold ? (
                   <TextInput
                     style={styles.thresholdInput}
@@ -856,30 +828,85 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Info color={theme.primary} size={20} />
-            <Text style={styles.sectionTitle}>About</Text>
+            <Moon color={theme.primary} size={20} />
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>Appearance</Text>
           </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Data Privacy</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingTitle, { color: colors.text, fontSize: fs(15) }]}>Dark Mode</Text>
+              <Text style={[styles.settingDescription, { color: colors.textSecondary, fontSize: fs(13) }]}>
+                Switch to a darker color scheme
+              </Text>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleDarkMode}
+              trackColor={{ false: "#d1d5db", true: theme.primaryLight }}
+              thumbColor={isDark ? theme.primary : "#f4f3f4"}
+            />
+          </View>
+
+          <View style={{ paddingVertical: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+              <Type color={colors.textSecondary} size={18} />
+              <Text style={[styles.settingTitle, { color: colors.text, fontSize: fs(15), marginBottom: 0 }]}>Font Size</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {FONT_SIZES.map((size) => (
+                <TouchableOpacity
+                  key={size.label}
+                  style={[
+                    styles.fontSizeButton,
+                    { borderColor: colors.border, backgroundColor: colors.inputBg },
+                    fontScale === size.scale && styles.fontSizeButtonActive,
+                  ]}
+                  onPress={() => setFontScale(size.scale)}
+                >
+                  <Text
+                    style={[
+                      styles.fontSizeButtonText,
+                      { fontSize: 14 * size.scale, color: colors.textSecondary },
+                      fontScale === size.scale && styles.fontSizeButtonTextActive,
+                    ]}
+                  >
+                    {size.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.settingDescription, { color: colors.textSecondary, fontSize: fs(13), marginTop: 8 }]}>
+              Adjusts text size across the app
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <View style={styles.sectionHeader}>
+            <Info color={theme.primary} size={20} />
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>About</Text>
+          </View>
+
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontSize: fs(14) }]}>Data Privacy</Text>
             <TouchableOpacity onPress={() => openInfoModal("Data Privacy", DATA_PRIVACY_CONTENT)}>
               <Text style={styles.linkText}>View Policy</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Terms of Service</Text>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontSize: fs(14) }]}>Terms of Service</Text>
             <TouchableOpacity onPress={() => openInfoModal("Terms of Service", TERMS_CONTENT)}>
               <Text style={styles.linkText}>View Terms</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
             <Watch color={theme.primary} size={20} />
-            <Text style={styles.sectionTitle}>Apple Watch Data</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(16) }]}>Apple Watch Data</Text>
           </View>
           <View
             style={[
@@ -898,8 +925,8 @@ export default function ProfileScreen() {
                 : "You have not consented to sharing Apple Watch data."}
             </Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Apple Watch data collection</Text>
+          <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontSize: fs(14) }]}>Apple Watch data collection</Text>
             <TouchableOpacity onPress={() => openInfoModal("Apple Watch Data", APPLE_WATCH_CONTENT)}>
               <Text style={styles.linkText}>View Info</Text>
             </TouchableOpacity>
@@ -937,7 +964,7 @@ export default function ProfileScreen() {
               style={[styles.button, styles.editButton]}
               onPress={() => setEditing(true)}
             >
-              <Text style={styles.buttonText}>Edit Profile</Text>
+              <Text style={[styles.buttonText, { fontSize: fs(16) }]}>Edit Profile</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -945,7 +972,7 @@ export default function ProfileScreen() {
               onPress={handleSignOut}
             >
               <LogOut color="#dc2626" size={20} />
-              <Text style={[styles.buttonText, { color: "#dc2626" }]}>
+              <Text style={[styles.buttonText, { color: "#dc2626", fontSize: fs(16) }]}>
                 Sign Out
               </Text>
             </TouchableOpacity>
@@ -1252,5 +1279,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.primary,
     fontWeight: "600",
+  },
+  fontSizeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  fontSizeButtonActive: {
+    backgroundColor: theme.primaryLight,
+    borderColor: theme.primary,
+  },
+  fontSizeButtonText: {
+    fontWeight: "500",
+  },
+  fontSizeButtonTextActive: {
+    color: theme.primary,
+    fontWeight: "700",
   },
 });
