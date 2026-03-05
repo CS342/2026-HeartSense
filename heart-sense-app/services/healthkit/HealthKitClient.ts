@@ -218,9 +218,9 @@ export async function getLatestWorkout(): Promise<WorkoutRecord | null> {
 }
 
 
-export async function subscribeToHighHeartRateEvent(): Promise<void> {
+export async function subscribeToHighHeartRateEvent(): Promise<boolean> {
   console.log('Subscribing to high heart rate event');
-  if (!checkAvailability()) return;
+  if (!checkAvailability()) return false;
 
   // Step 1: Request authorization for the category type
   await HealthKit.requestAuthorization({ toRead: [HK_IDENTIFIERS.highHeartRateEvent] });
@@ -231,20 +231,23 @@ export async function subscribeToHighHeartRateEvent(): Promise<void> {
     UpdateFrequency.immediate
   );
 
-  console.log('Subscribing to changes');
+  console.log('Subscribing to changes to high heart rate');
   // Step 3: Subscribe to changes (this sets up the HKObserverQuery + event listener)
-  const subscription = HealthKit.subscribeToChanges(HK_IDENTIFIERS.highHeartRateEvent, () => {
-    // This callback fires when a new high heart rate event lands in HealthKit.
-    void handleHighHeartRateEvent();
-  });
+  const subscription = HealthKit.subscribeToChanges(
+    HK_IDENTIFIERS.highHeartRateEvent, 
+    () => {
+      // This callback fires when a new high heart rate event lands in HealthKit.
+      void handleHighHeartRateEvent();
+    }
+  );
+
   console.log('Subscribed to changes', subscription);
+  return subscription !== null;
 }
 
 export async function handleHighHeartRateEvent(): Promise<void> {
-  console.log('High heart rate event detected');
-  sendElevatedHeartRatePushCallable();
-
-  const message = `Your heart rate is elevated. Please log a symptom.`;
+  console.log('High heart rate detected');
+  const message = `We detected an elevated heart rate. Please log a symptom.`;
   // Local notification (shows when app is in foreground)
   await showLocalNotification(
     'Elevated Heart Rate Detected',
@@ -261,5 +264,4 @@ export async function handleHighHeartRateEvent(): Promise<void> {
   } catch (err) {
     console.warn('[handleHighHeartRateEvent] Push call failed:', err);
   }
-
 }

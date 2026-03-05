@@ -91,12 +91,6 @@ export default function HomeScreen() {
     }, [user])
   );
 
-  // When vitals load (e.g. from HealthKit), check for elevated heart rate and notify if enabled
-  useEffect(() => {
-    if (!user || !vitals) return;
-    checkAndNotifyIfElevated(user.uid, vitals);
-  }, [user?.uid, vitals]);
-
   const loadStats = async () => {
     if (!user) {
       console.log('loadStats: No user');
