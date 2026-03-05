@@ -64,6 +64,7 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     gap: 10,
+    marginBottom: 10,
   },
   outerRing: {
     justifyContent: 'center',

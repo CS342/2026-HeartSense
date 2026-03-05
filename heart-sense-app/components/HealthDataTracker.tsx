@@ -93,7 +93,7 @@ export function HealthDataTracker() {
         appStateRef.current.match(/inactive|background/) &&
         nextState === 'active'
       ) {
-        runDailySync();
+        runDailySync(false);
       }
       appStateRef.current = nextState;
     });

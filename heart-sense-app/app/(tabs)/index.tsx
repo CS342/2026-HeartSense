@@ -39,7 +39,6 @@ import { theme } from '@/theme/colors';
 import { useTheme } from '@/contexts/ThemeContext';
 import AppLogo from '@/components/AppLogo';
 import { useHealthKit } from '@/hooks/useHealthKit';
-import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
 
 interface QuickStats {
   todayEntries: number;
@@ -205,22 +204,24 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView}>
         <View style={[styles.header, { backgroundColor: isDark ? colors.surface : theme.primary }]}>
+          <View style={styles.headerRight}>
+            {hkAvailable && (
+              <View style={styles.syncBadge}>
+                <Watch color="#fff" size={20} />
+                <Text style={[styles.syncText, { fontSize: fs(14) }]}>
+                  {timeAgo(vitals?.lastUpdated ?? null)}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
+              <HelpCircle color="#fff" size={28} />
+            </TouchableOpacity>
+          </View>
           <AppLogo size="small" showTitle={true} variant="light" />
           <View style={styles.headerContent}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <Text style={[styles.greeting, { fontSize: fs(24) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
               <Text style={[styles.subtitle, { fontSize: fs(15) }]}>How are you feeling today?</Text>
-            </View>
-            <View style={styles.headerRight}>
-              {hkAvailable && (
-                <View style={styles.syncBadge}>
-                  <Watch color="#fff" size={16} />
-                  <Text style={styles.syncText}>{timeAgo(vitals?.lastUpdated ?? null)}</Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
-                <HelpCircle color="#fff" size={28} />
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -231,48 +232,126 @@ export default function HomeScreen() {
               <AlertCircle color="#ea580c" size={24} />
             </View>
             <View style={styles.alertContent}>
-              <Text style={[styles.alertTitle, isDark && { color: '#fbbf24' }]}>Haven't logged in {daysSinceLastEntry} days</Text>
-              <Text style={[styles.alertText, isDark && { color: '#fbbf24' }]}>
+              <Text
+                style={[
+                  styles.alertTitle,
+                  { fontSize: fs(16) },
+                  isDark && { color: '#fbbf24' },
+                ]}
+              >
+                Haven't logged in {daysSinceLastEntry} days
+              </Text>
+              <Text
+                style={[
+                  styles.alertText,
+                  { fontSize: fs(14) },
+                  isDark && { color: '#fbbf24' },
+                ]}
+              >
                 Regular tracking helps us better understand your health patterns. Please log your symptoms and well-being today.
               </Text>
             </View>
           </View>
         )}
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCardSmall}>
-            <Text style={styles.statLabel}>Today's{'\n'}Entries</Text>
-            <Text style={styles.statValue}>{stats.todayEntries}</Text>
-          </View>
-
+        <View style={styles.statsContainer}>
           <View style={[styles.wellbeingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.wellbeingBlockTitle, { color: colors.textSecondary }]}>Well-Being</Text>
+            <Text
+              style={[
+                styles.wellbeingBlockTitle,
+                { color: colors.textSecondary, fontSize: fs(14) },
+              ]}
+            >
+              Well-Being
+            </Text>
             {latestWellbeing ? (
               <View style={styles.wellbeingRow}>
                 <View style={styles.wellbeingPill}>
-                  <Zap color={theme.primary} size={16} />
-                  <Text style={[styles.wellbeingPillLabel, { color: colors.textSecondary }]}>Energy</Text>
-                  <Text style={[styles.wellbeingPillValue, { color: colors.text }]}>{latestWellbeing.energyLevel.toFixed(1)}</Text>
+                  <Zap color={theme.primary} size={20} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Energy
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.energyLevel.toFixed(1)}
+                  </Text>
                 </View>
                 <View style={styles.wellbeingPill}>
-                  <PersonStanding color={theme.primary} size={16} />
-                  <Text style={[styles.wellbeingPillLabel, { color: colors.textSecondary }]}>Mood</Text>
-                  <Text style={[styles.wellbeingPillValue, { color: colors.text }]}>{latestWellbeing.moodRating.toFixed(1)}</Text>
+                  <PersonStanding color={theme.primary} size={22} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Mood
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.moodRating.toFixed(1)}
+                  </Text>
                 </View>
                 <View style={styles.wellbeingPill}>
-                  <Wind color={theme.primary} size={16} />
-                  <Text style={[styles.wellbeingPillLabel, { color: colors.textSecondary }]}>Stress</Text>
-                  <Text style={[styles.wellbeingPillValue, { color: colors.text }]}>{latestWellbeing.stressLevel.toFixed(1)}</Text>
+                  <Wind color={theme.primary} size={22} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Stress
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.stressLevel.toFixed(1)}
+                  </Text>
                 </View>
               </View>
             ) : (
-              <Text style={[styles.wellbeingEmpty, { color: colors.textTertiary }]}>—</Text>
+              <Text
+                style={[
+                  styles.wellbeingEmpty,
+                  { color: colors.textTertiary, fontSize: fs(13) },
+                ]}
+              >
+                —
+              </Text>
             )}
           </View>
-
-          <View style={styles.statCardSmall}>
-            <Text style={styles.statLabel}>This{'\n'}Week</Text>
-            <Text style={styles.statValue}>{stats.weeklyEntries}</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statCardSmall}>
+              <Text style={[styles.statLabel, { fontSize: fs(14) }]}>
+                Today's Entries
+              </Text>
+              <Text style={[styles.statValue, { fontSize: fs(24) }]}>
+                {stats.todayEntries}
+              </Text>
+            </View>
+            <View style={styles.statCardSmall}>
+              <Text style={[styles.statLabel, { fontSize: fs(14) }]}>
+                This Week
+              </Text>
+              <Text style={[styles.statValue, { fontSize: fs(24) }]}>
+                {stats.weeklyEntries}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -283,10 +362,14 @@ export default function HomeScreen() {
             style={[styles.actionCard, { backgroundColor: isDark ? '#3a1a1a' : '#fee', borderColor: colors.border }]}
             onPress={() => router.push('/screens/symptom-entry')}
           >
-            <View style={styles.actionCardIcon}>
-              <Heart color="#dc2626" size={32} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Heart color="#dc2626" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Log Symptom
+              </Text>
             </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>Log Symptom</Text>
             <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
               Record any symptoms you're experiencing right now
             </Text>
@@ -296,10 +379,14 @@ export default function HomeScreen() {
             style={[styles.actionCard, { backgroundColor: isDark ? '#1a2a3a' : '#e6f2ff', borderColor: colors.border }]}
             onPress={() => router.push('/screens/wellbeing-rating')}
           >
-            <View style={styles.actionCardIcon}>
-              <TrendingUp color="#0066cc" size={32} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <TrendingUp color="#0066cc" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Rate Well-Being
+              </Text>
             </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>Rate Well-Being</Text>
             <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
               Share how you're feeling overall today
             </Text>
@@ -309,10 +396,14 @@ export default function HomeScreen() {
             style={[styles.actionCard, { backgroundColor: isDark ? '#1a2e1a' : '#f0fdf4', borderColor: colors.border }]}
             onPress={() => router.push('/screens/activity-entry')}
           >
-            <View style={styles.actionCardIcon}>
-              <Activity color="#16a34a" size={32} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Activity color="#16a34a" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Log Activity
+              </Text>
             </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>Log Activity</Text>
             <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
               Track activities and exercises you've done
             </Text>
@@ -322,10 +413,14 @@ export default function HomeScreen() {
             style={[styles.actionCard, { backgroundColor: isDark ? '#3a2a1a' : '#fef3e7', borderColor: colors.border }]}
             onPress={() => router.push('/screens/medical-condition')}
           >
-            <View style={styles.actionCardIcon}>
-              <Stethoscope color="#ea580c" size={32} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Stethoscope color="#ea580c" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Medical Change
+              </Text>
             </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>Medical Change</Text>
             <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
               Report changes in medications or condition
             </Text>
@@ -351,7 +446,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.primary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    gap: 14,
   },
   headerContent: {
     flexDirection: 'row',
@@ -361,6 +455,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
   },
   syncBadge: {
@@ -389,10 +484,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.8)',
   },
-  statsRow: {
-    flexDirection: 'row',
+  statsContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    gap: 10,
+    alignItems: 'stretch',
+  },
+  statsRow: {
+    flexDirection: 'row',
     gap: 10,
     alignItems: 'stretch',
   },
@@ -403,6 +502,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 64,
+    flex: 1,
   },
   wellbeingBlock: {
     flex: 1,
@@ -417,6 +517,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
     textAlign: 'center',
+    fontWeight: '700',
   },
   wellbeingRow: {
     flexDirection: 'row',
@@ -448,6 +549,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     marginBottom: 4,
     textAlign: 'center',
+    fontWeight: '700',
   },
   statValue: {
     fontSize: 24,
@@ -470,8 +572,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e5e5',
   },
+  actionCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   actionCardIcon: {
-    marginBottom: 16,
+    marginRight: 12,
   },
   actionCardTitle: {
     fontSize: 24,
