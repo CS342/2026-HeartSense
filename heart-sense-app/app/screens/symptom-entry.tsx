@@ -507,8 +507,8 @@ export default function SymptomEntry() {
                     <Text style={[styles.severityText, { color: severity === num ? '#fff' : SEVERITY_COLORS[num] }]}>
                       {num}
                     </Text>
-                  ))}
-                </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
             <View style={[styles.severityDescriptionBox, { borderColor: SEVERITY_COLORS[severity], backgroundColor: SEVERITY_COLORS[severity] + '18' }]}>
