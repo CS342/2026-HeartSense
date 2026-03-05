@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { checkAvailability, requestHealthPermissions, getLatestVitals } from '@/services/healthkit';
 import { performDailySync } from '@/services/healthkit/healthSyncService';
 import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
+import { subscribeToHighHeartRateEvent } from '@/services/healthkit/HealthKitClient';
 
 export function HealthDataTracker() {
   const { user } = useAuth();
@@ -74,6 +75,10 @@ export function HealthDataTracker() {
     (async () => {
       const granted = await requestHealthPermissions();
       if (__DEV__) console.log('[HealthDataTracker] Permissions requested, granted:', granted);
+
+      // Subscribe to high heart rate event
+      await subscribeToHighHeartRateEvent();
+
       if (granted && !cancelled) {
         // Brief pause so iOS has time to persist the user's permission choices
         await new Promise((r) => setTimeout(r, 1500));

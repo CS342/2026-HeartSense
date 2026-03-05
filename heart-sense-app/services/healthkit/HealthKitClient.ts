@@ -5,13 +5,14 @@
  * Every public function is safe to call on Android/web — it returns null / false.
  */
 import { Platform } from 'react-native';
-import {
+import HealthKit, {
   isHealthDataAvailable,
   requestAuthorization,
   getMostRecentQuantitySample,
   queryQuantitySamples,
   queryWorkoutSamples,
   getMostRecentWorkout,
+  UpdateFrequency,
 } from '@kingstinct/react-native-healthkit';
 import {
   HK_IDENTIFIERS,
@@ -23,6 +24,9 @@ import {
   type WorkoutRecord,
 } from './types';
 import { toVitalsSample, toCalendarDate, toWorkoutRecord } from './mappers';
+import { sendElevatedHeartRatePushCallable } from '@/lib/firebase';
+import { showLocalNotification } from '@/lib/notificationService';
+import { ELEVATED_HR_NOTIFICATION_SCREEN } from '@/lib/elevatedHeartRateNotification';
 
 // ── Availability ────────────────────────────────────────────────────
 
@@ -211,4 +215,51 @@ export async function getLatestWorkout(): Promise<WorkoutRecord | null> {
     if (__DEV__) console.warn('[HealthKit] getMostRecentWorkout failed:', err);
     return null;
   }
+}
+
+
+export async function subscribeToHighHeartRateEvent(): Promise<void> {
+  console.log('Subscribing to high heart rate event');
+  if (!checkAvailability()) return;
+
+  // Step 1: Request authorization for the category type
+  await HealthKit.requestAuthorization({ toRead: [HK_IDENTIFIERS.highHeartRateEvent] });
+
+  // Step 2: Enable background delivery (this is what wakes your app)
+  await HealthKit.enableBackgroundDelivery(
+    HK_IDENTIFIERS.highHeartRateEvent,
+    UpdateFrequency.immediate
+  );
+
+  console.log('Subscribing to changes');
+  // Step 3: Subscribe to changes (this sets up the HKObserverQuery + event listener)
+  const subscription = HealthKit.subscribeToChanges(HK_IDENTIFIERS.highHeartRateEvent, () => {
+    // This callback fires when a new high heart rate event lands in HealthKit.
+    void handleHighHeartRateEvent();
+  });
+  console.log('Subscribed to changes', subscription);
+}
+
+export async function handleHighHeartRateEvent(): Promise<void> {
+  console.log('High heart rate event detected');
+  sendElevatedHeartRatePushCallable();
+
+  const message = `Your heart rate is elevated. Please log a symptom.`;
+  // Local notification (shows when app is in foreground)
+  await showLocalNotification(
+    'Elevated Heart Rate Detected',
+    message,
+    { screen: ELEVATED_HR_NOTIFICATION_SCREEN }
+  );
+
+  // Ask backend to send a push so the user gets it when app is in background or closed
+  try {
+    const { data } = await sendElevatedHeartRatePushCallable();
+    if (!data?.success && data?.error) {
+      console.warn('[handleHighHeartRateEvent] Push failed:', data.error);
+    }
+  } catch (err) {
+    console.warn('[handleHighHeartRateEvent] Push call failed:', err);
+  }
+
 }
