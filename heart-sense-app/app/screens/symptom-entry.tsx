@@ -75,7 +75,7 @@ const SEVERITY_COLORS: Record<number, string> = {
   5: '#ef4444',
 };
 
-const SYMPTOM_TYPES = [
+export const SYMPTOM_TYPES = [
   'Dizziness',
   'Fainting',
   'Chest Pain',

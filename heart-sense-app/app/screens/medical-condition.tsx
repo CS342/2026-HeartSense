@@ -44,7 +44,7 @@ import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
 
-const CONDITION_TYPES = [
+export const CONDITION_TYPES = [
   'New Medication',
   'Medication Change',
   'Medication Stopped',

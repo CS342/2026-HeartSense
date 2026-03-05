@@ -17,9 +17,12 @@ import {
   getSymptoms, getActivities, getWellbeingRatings, getMedicalChanges,
   updateSymptom, updateActivity, updateWellbeingRating, updateMedicalChange,
 } from '@/lib/symptomService';
-import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight, Pencil, Save } from 'lucide-react-native';
+import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight, Pencil, Save, ChevronDown } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 import { useTheme } from '@/contexts/ThemeContext';
+import { SYMPTOM_TYPES } from '@/app/screens/symptom-entry';
+import { ACTIVITY_TYPES } from '@/app/screens/activity-entry';
+import { CONDITION_TYPES } from '@/app/screens/medical-condition';
 
 type EntryType = 'all' | 'symptom' | 'wellbeing' | 'activity' | 'medical';
 
@@ -40,12 +43,13 @@ const SEVERITY_COLORS: Record<number, string> = {
   5: '#ef4444',
 };
 
-const FILTER_OPTIONS: { key: EntryType; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'symptom', label: 'Symptoms' },
-  { key: 'wellbeing', label: 'Well-Being' },
-  { key: 'activity', label: 'Activities' },
-  { key: 'medical', label: 'Medical' },
+type FilterOption = { key: EntryType; label: string, types: string[] | null };
+const FILTER_OPTIONS: FilterOption[] = [
+  { key: 'all', label: 'All', types: null },
+  { key: 'symptom', label: 'Symptoms', types: ['All', ...SYMPTOM_TYPES] },
+  { key: 'wellbeing', label: 'Well-Being', types: null },
+  { key: 'activity', label: 'Activities', types: ['All', ...ACTIVITY_TYPES] },
+  { key: 'medical', label: 'Medical', types: ['All', ...CONDITION_TYPES] },
 ];
 
 export default function HistoryScreen() {
@@ -53,7 +57,9 @@ export default function HistoryScreen() {
   const { isDark, colors, fs } = useTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<EntryType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterOption>(FILTER_OPTIONS[0]);
+  const [activeTypesFilter, setActiveTypesFilter] = useState<string>('All');
+  const [typeFilterExpanded, setTypeFilterExpanded] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<TimelineEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, any>>({});
@@ -213,9 +219,21 @@ export default function HistoryScreen() {
     }
   };
 
-  const filteredEntries = activeFilter === 'all'
-    ? entries
-    : entries.filter((e) => e.type === activeFilter);
+  const filteredEntries = activeFilter === FILTER_OPTIONS[0] ? entries
+    : activeTypesFilter !== 'All'
+      ? entries.filter((e) => e.type === activeFilter.key && e.title === activeTypesFilter)
+      : entries.filter((e) => e.type === activeFilter.key);
+
+
+  const handleFilterPress = (filter: FilterOption) => () => {
+    setActiveFilter(filter);
+    setActiveTypesFilter('All');
+  };
+
+  const handleTypeFilterPress = (type: string) => () => {
+    setActiveTypesFilter(type);
+    setTypeFilterExpanded(false);
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -472,7 +490,14 @@ export default function HistoryScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.text, fontSize: fs(32) }]}>History</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: fs(14) }]}>{filteredEntries.length} {activeFilter === 'all' ? 'total' : activeFilter} entries</Text>
+        <Text
+          style={[
+            styles.subtitle,
+            { color: colors.textSecondary, fontSize: fs(14) }
+          ]}
+        >
+          {filteredEntries.length} {activeFilter.key === 'all' ? 'total' : activeFilter.label} entries
+        </Text>
       </View>
 
       <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -480,27 +505,66 @@ export default function HistoryScreen() {
           {FILTER_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.key}
-              style={[styles.filterChip, { backgroundColor: colors.inputBg, borderColor: colors.border }, activeFilter === opt.key && styles.filterChipActive]}
-              onPress={() => setActiveFilter(opt.key)}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.border
+                },
+                activeFilter.key === opt.key && styles.filterChipActive
+              ]}
+              onPress={handleFilterPress(opt)}
             >
-              <Text style={[styles.filterChipText, { color: colors.textSecondary, fontSize: fs(14) }, activeFilter === opt.key && styles.filterChipTextActive]}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: colors.textSecondary, fontSize: fs(14) },
+                  activeFilter.key === opt.key && styles.filterChipTextActive
+                ]}
+              >
                 {opt.label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
+      {activeFilter.types && (
+        <View style={styles.filterTypesContainer}>
+          <TouchableOpacity
+            onPress={() => setTypeFilterExpanded(!typeFilterExpanded)}
+            style={styles.activeTypeFilterContainer}
+          >
+            <Text style={styles.activeTypeFilterText}>{activeTypesFilter}</Text>
+            <ChevronDown color={colors.textSecondary} size={18} />
+          </TouchableOpacity>
+          {typeFilterExpanded && (
+            <ScrollView
+              style={styles.typeFilterScroll}
+            >
+              {activeFilter.types.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.typeFilterChip}
+                  onPress={handleTypeFilterPress(type)}
+                >
+                  <Text style={styles.typeFilterChipText}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
 
       <ScrollView style={styles.scrollView}>
         {filteredEntries.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyTitle, { color: colors.text, fontSize: fs(20) }]}>
-              {activeFilter === 'all' ? 'No entries yet' : `No ${activeFilter} entries`}
+              {activeFilter.key === 'all' ? 'No entries yet' : `No ${activeFilter.label} entries`}
             </Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: fs(16) }]}>
-              {activeFilter === 'all'
+              {activeFilter.key === 'all'
                 ? 'Start tracking your health to see your history here'
-                : `You haven't logged any ${activeFilter} entries yet`}
+                : `You haven't logged any ${activeFilter.label} entries yet`}
             </Text>
           </View>
         ) : (
@@ -898,5 +962,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f9fafb',
+  },
+
+  // Type filter styles
+  filterTypesContainer: {
+    padding: 10,
+    paddingHorizontal: 16,
+  },
+  activeTypeFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 15,
+    padding: 16,
+  },
+  activeTypeFilterText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  typeFilterScroll: {
+    height: 200,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  typeFilterChip: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+    padding: 16,
+  },
+  typeFilterChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
   },
 });

@@ -66,7 +66,7 @@ import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
 
-const ACTIVITY_TYPES = [
+export const ACTIVITY_TYPES = [
   'Exercise',
   'Walking',
   'Running',
