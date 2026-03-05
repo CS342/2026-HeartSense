@@ -19,6 +19,7 @@ import {
 } from '@/lib/symptomService';
 import { Heart, Activity, Stethoscope, TrendingUp, X, ChevronRight, Pencil, Save } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type EntryType = 'all' | 'symptom' | 'wellbeing' | 'activity' | 'medical';
 
@@ -42,13 +43,14 @@ const SEVERITY_COLORS: Record<number, string> = {
 const FILTER_OPTIONS: { key: EntryType; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'symptom', label: 'Symptoms' },
-  { key: 'wellbeing', label: 'Well-being' },
+  { key: 'wellbeing', label: 'Well-Being' },
   { key: 'activity', label: 'Activities' },
   { key: 'medical', label: 'Medical' },
 ];
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const { isDark, colors, fs } = useTheme();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<EntryType>('all');
@@ -181,7 +183,7 @@ export default function HistoryScreen() {
           timeline.push({
             id: w.id,
             type: 'wellbeing',
-            title: 'Well-being Rating',
+            title: 'Well-Being Rating',
             description: `Energy: ${w.energyLevel} · Mood: ${w.moodRating} · Stress: ${w.stressLevel}`,
             timestamp: w.recordedAt,
             details: w,
@@ -231,24 +233,28 @@ export default function HistoryScreen() {
   };
 
   const getBackgroundColor = (type: string) => {
+    if (isDark) {
+      switch (type) {
+        case 'symptom': return '#3a1a1a';
+        case 'wellbeing': return '#1a2a3a';
+        case 'activity': return '#1a2e1a';
+        case 'medical': return '#3a2a1a';
+        default: return colors.cardBg;
+      }
+    }
     switch (type) {
-      case 'symptom':
-        return '#fee';
-      case 'wellbeing':
-        return '#e6f2ff';
-      case 'activity':
-        return '#f0fdf4';
-      case 'medical':
-        return '#fef3e7';
-      default:
-        return '#f9f9f9';
+      case 'symptom': return '#fee';
+      case 'wellbeing': return '#e6f2ff';
+      case 'activity': return '#f0fdf4';
+      case 'medical': return '#fef3e7';
+      default: return '#f9f9f9';
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'symptom': return 'Symptom';
-      case 'wellbeing': return 'Well-being';
+      case 'wellbeing': return 'Well-Being';
       case 'activity': return 'Activity';
       case 'medical': return 'Medical Change';
       default: return '';
@@ -346,7 +352,7 @@ export default function HistoryScreen() {
       case 'symptom':
         return (
           <>
-            <Text style={styles.editLabel}>Severity (1–5)</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Severity (1–5)</Text>
             <View style={styles.severityRow}>
               {[1, 2, 3, 4, 5].map((v) => (
                 <TouchableOpacity
@@ -358,7 +364,7 @@ export default function HistoryScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.editLabel}>Description</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Description</Text>
             <TextInput
               style={styles.editInput}
               value={editFields.description}
@@ -371,14 +377,14 @@ export default function HistoryScreen() {
       case 'activity':
         return (
           <>
-            <Text style={styles.editLabel}>Duration (minutes)</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Duration (minutes)</Text>
             <TextInput
               style={styles.editInputShort}
               value={String(editFields.durationMinutes ?? '')}
               onChangeText={(t) => setEditFields({ ...editFields, durationMinutes: parseInt(t) || 0 })}
               keyboardType="number-pad"
             />
-            <Text style={styles.editLabel}>Intensity</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Intensity</Text>
             <View style={styles.severityRow}>
               {['low', 'moderate', 'high'].map((v) => (
                 <TouchableOpacity
@@ -392,7 +398,7 @@ export default function HistoryScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.editLabel}>Description</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Description</Text>
             <TextInput
               style={styles.editInput}
               value={editFields.description}
@@ -409,7 +415,7 @@ export default function HistoryScreen() {
               const label = field === 'energyLevel' ? 'Energy' : field === 'moodRating' ? 'Mood' : 'Stress';
               return (
                 <View key={field}>
-                  <Text style={styles.editLabel}>{label} (1–5)</Text>
+                  <Text style={[styles.editLabel, { fontSize: fs(13) }]}>{label} (1–5)</Text>
                   <View style={styles.severityRow}>
                     {[1, 2, 3, 4, 5].map((v) => (
                       <TouchableOpacity
@@ -424,7 +430,7 @@ export default function HistoryScreen() {
                 </View>
               );
             })}
-            <Text style={styles.editLabel}>Notes</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Notes</Text>
             <TextInput
               style={styles.editInput}
               value={editFields.notes}
@@ -437,7 +443,7 @@ export default function HistoryScreen() {
       case 'medical':
         return (
           <>
-            <Text style={styles.editLabel}>Description</Text>
+            <Text style={[styles.editLabel, { fontSize: fs(13) }]}>Description</Text>
             <TextInput
               style={styles.editInput}
               value={editFields.description}
@@ -454,7 +460,7 @@ export default function HistoryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
@@ -463,21 +469,21 @@ export default function HistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-        <Text style={styles.subtitle}>{filteredEntries.length} {activeFilter === 'all' ? 'total' : activeFilter} entries</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text, fontSize: fs(32) }]}>History</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: fs(14) }]}>{filteredEntries.length} {activeFilter === 'all' ? 'total' : activeFilter} entries</Text>
       </View>
 
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           {FILTER_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.key}
-              style={[styles.filterChip, activeFilter === opt.key && styles.filterChipActive]}
+              style={[styles.filterChip, { backgroundColor: colors.inputBg, borderColor: colors.border }, activeFilter === opt.key && styles.filterChipActive]}
               onPress={() => setActiveFilter(opt.key)}
             >
-              <Text style={[styles.filterChipText, activeFilter === opt.key && styles.filterChipTextActive]}>
+              <Text style={[styles.filterChipText, { color: colors.textSecondary, fontSize: fs(14) }, activeFilter === opt.key && styles.filterChipTextActive]}>
                 {opt.label}
               </Text>
             </TouchableOpacity>
@@ -488,10 +494,10 @@ export default function HistoryScreen() {
       <ScrollView style={styles.scrollView}>
         {filteredEntries.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>
+            <Text style={[styles.emptyTitle, { color: colors.text, fontSize: fs(20) }]}>
               {activeFilter === 'all' ? 'No entries yet' : `No ${activeFilter} entries`}
             </Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: fs(16) }]}>
               {activeFilter === 'all'
                 ? 'Start tracking your health to see your history here'
                 : `You haven't logged any ${activeFilter} entries yet`}
@@ -502,23 +508,23 @@ export default function HistoryScreen() {
             {filteredEntries.map((entry) => (
               <TouchableOpacity
                 key={entry.id}
-                style={styles.entryCard}
+                style={[styles.entryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setSelectedEntry(entry)}
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconContainer, { backgroundColor: getBackgroundColor(entry.type) }]}>
                   {getIcon(entry.type)}
                   {entry.type === 'symptom' && entry.details?.severity != null && (
-                    <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[entry.details.severity] }]} />
+                    <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[entry.details.severity], borderColor: colors.surface }]} />
                   )}
                 </View>
                 <View style={styles.entryContent}>
-                  <Text style={styles.entryTitle}>{entry.title}</Text>
-                  <Text style={styles.entryDescription} numberOfLines={2}>{entry.description}</Text>
-                  <Text style={styles.entryTime}>{formatDate(entry.timestamp)}</Text>
+                  <Text style={[styles.entryTitle, { color: colors.text, fontSize: fs(16) }]}>{entry.title}</Text>
+                  <Text style={[styles.entryDescription, { color: colors.textSecondary, fontSize: fs(14) }]} numberOfLines={2}>{entry.description}</Text>
+                  <Text style={[styles.entryTime, { color: colors.textTertiary, fontSize: fs(12) }]}>{formatDate(entry.timestamp)}</Text>
                 </View>
                 <View style={styles.chevronContainer}>
-                  <ChevronRight color="#ccc" size={18} />
+                  <ChevronRight color={colors.textTertiary} size={18} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -533,13 +539,13 @@ export default function HistoryScreen() {
         onRequestClose={closeModal}
       >
         {selectedEntry && (
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <View style={styles.modalHeaderLeft}>
                 <View style={[styles.modalIconContainer, { backgroundColor: getBackgroundColor(selectedEntry.type) }]}>
                   {getIcon(selectedEntry.type)}
                 </View>
-                <Text style={styles.modalType}>{getTypeLabel(selectedEntry.type)}</Text>
+                <Text style={[styles.modalType, { color: colors.textSecondary, fontSize: fs(14) }]}>{getTypeLabel(selectedEntry.type)}</Text>
               </View>
               <View style={styles.modalHeaderRight}>
                 {!isEditing ? (
@@ -554,14 +560,14 @@ export default function HistoryScreen() {
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={closeModal} style={styles.modalClose}>
-                  <X color="#666" size={24} />
+                  <X color={colors.textSecondary} size={24} />
                 </TouchableOpacity>
               </View>
             </View>
             <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{selectedEntry.title}</Text>
-              <Text style={styles.modalTimestamp}>{formatFullDate(selectedEntry.timestamp)}</Text>
-              <View style={styles.detailDivider} />
+              <Text style={[styles.modalTitle, { color: colors.text, fontSize: fs(24) }]}>{selectedEntry.title}</Text>
+              <Text style={[styles.modalTimestamp, { color: colors.textTertiary, fontSize: fs(14) }]}>{formatFullDate(selectedEntry.timestamp)}</Text>
+              <View style={[styles.detailDivider, { backgroundColor: colors.border }]} />
               {isEditing ? renderEditContent(selectedEntry) : renderDetailContent(selectedEntry)}
             </ScrollView>
           </SafeAreaView>
@@ -572,10 +578,11 @@ export default function HistoryScreen() {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
+  const { colors, fs } = useTheme();
   return (
     <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <Text style={[styles.detailLabel, { color: colors.textTertiary, fontSize: fs(13) }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.text, fontSize: fs(16) }]}>{value}</Text>
     </View>
   );
 }

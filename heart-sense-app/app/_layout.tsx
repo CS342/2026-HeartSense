@@ -7,6 +7,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { NotificationBanner } from '@/components/NotificationBanner';
 import { HealthDataTracker } from '@/components/HealthDataTracker';
 
@@ -48,33 +49,46 @@ export default function RootLayout() {
   (Text as any).defaultProps = { ...defaultTextStyle, style: [{ fontFamily: 'DMSans_400Regular' }, defaultTextStyle.style] };
 
   return (
-    <AuthProvider>
-      <OnboardingProvider>
-        <HealthDataTracker />
-        <View style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="auth/login" />
-            <Stack.Screen name="auth/signup" />
-            <Stack.Screen name="onboarding/index" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="screens/symptom-entry" />
-            <Stack.Screen name="screens/wellbeing-rating" />
-            <Stack.Screen name="screens/activity-entry" />
-            <Stack.Screen name="screens/medical-condition" />
-            <Stack.Screen name="screens/help" />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <NotificationBanner
-            title={notification.title}
-            message={notification.message}
-            visible={notification.visible}
-            onDismiss={() => setNotification(prev => ({ ...prev, visible: false }))}
-            type="info"
-          />
-          <StatusBar style="auto" />
-        </View>
-      </OnboardingProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <OnboardingProvider>
+          <HealthDataTracker />
+          <ThemedRoot notification={notification} setNotification={setNotification} />
+        </OnboardingProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+function ThemedRoot({ notification, setNotification }: {
+  notification: { title: string; message: string; visible: boolean };
+  setNotification: React.Dispatch<React.SetStateAction<{ title: string; message: string; visible: boolean }>>;
+}) {
+  const { isDark, colors } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth/signup" />
+        <Stack.Screen name="onboarding/index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="screens/symptom-entry" />
+        <Stack.Screen name="screens/wellbeing-rating" />
+        <Stack.Screen name="screens/activity-entry" />
+        <Stack.Screen name="screens/medical-condition" />
+        <Stack.Screen name="screens/help" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <NotificationBanner
+        title={notification.title}
+        message={notification.message}
+        visible={notification.visible}
+        onDismiss={() => setNotification(prev => ({ ...prev, visible: false }))}
+        type="info"
+      />
+      <StatusBar style={isDark ? 'light' : 'auto'} />
+    </View>
   );
 }
