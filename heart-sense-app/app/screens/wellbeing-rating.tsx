@@ -39,8 +39,12 @@ function QuickBounce({ text, color, onDone }: { text: string; color: string; onD
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
-import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar, Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+
+const MOOD_EMOJIS: Record<number, string> = {
+  1: '😣', 2: '😔', 3: '😐', 4: '🙂', 5: '😄',
+};
 
 // Shared color scale: 1 = green → 5 = red
 const RATING_COLORS: Record<number, string> = {
@@ -95,8 +99,30 @@ export default function WellbeingRating() {
   const notesSectionRef = useRef<View>(null);
   const notesFocusedRef = useRef(false);
   const scrollYRef = useRef(0);
+  const moodEmojiAnim = useRef(new Animated.Value(1)).current;
+  const prevMoodRef = useRef(moodRating);
+  const heartSubmitAnim = useRef(new Animated.Value(0)).current;
   const HEADER_APPROX = 100;
   const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    if (prevMoodRef.current !== moodRating) {
+      prevMoodRef.current = moodRating;
+      Animated.sequence([
+        Animated.spring(moodEmojiAnim, { toValue: 1.4, useNativeDriver: true, speed: 50, bounciness: 14 }),
+        Animated.spring(moodEmojiAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }),
+      ]).start();
+    }
+  }, [moodRating]);
+
+  useEffect(() => {
+    if (submitted) {
+      Animated.sequence([
+        Animated.spring(heartSubmitAnim, { toValue: 1.4, useNativeDriver: true, speed: 15, bounciness: 18 }),
+        Animated.spring(heartSubmitAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+      ]).start();
+    }
+  }, [submitted]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -298,6 +324,9 @@ export default function WellbeingRating() {
             <Text style={styles.label}>Mood (1–5)</Text>
           </View>
           <Text style={styles.description}>{selectedMood?.description}</Text>
+          <Animated.Text style={{ fontSize: 42, textAlign: 'center', marginBottom: 12, transform: [{ scale: moodEmojiAnim }] }}>
+            {MOOD_EMOJIS[moodRating]}
+          </Animated.Text>
           <View style={styles.scaleRow}>
             {MOOD_RATINGS.map((item) => (
               <TouchableOpacity
@@ -342,6 +371,9 @@ export default function WellbeingRating() {
 
         {submitted && (
           <View style={styles.successBanner}>
+            <Animated.View style={{ transform: [{ scale: heartSubmitAnim }], marginBottom: 6 }}>
+              <Heart color="#fff" size={30} fill="#fff" />
+            </Animated.View>
             <QuickBounce
               text="Rating Saved!"
               color="#fff"
