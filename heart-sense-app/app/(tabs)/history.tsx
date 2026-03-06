@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Animated,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -64,6 +65,7 @@ export default function HistoryScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editFields, setEditFields] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const entryAnims = useRef<Animated.Value[]>([]);
 
   const startEditing = (entry: TimelineEntry) => {
     const d = entry.details;
@@ -224,6 +226,12 @@ export default function HistoryScreen() {
       ? entries.filter((e) => e.type === activeFilter.key && e.title === activeTypesFilter)
       : entries.filter((e) => e.type === activeFilter.key);
 
+  useEffect(() => {
+    entryAnims.current = filteredEntries.map(() => new Animated.Value(0));
+    Animated.stagger(45, entryAnims.current.map((anim) =>
+      Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 3 })
+    )).start();
+  }, [entries, activeFilter.key, activeTypesFilter]);
 
   const handleFilterPress = (filter: FilterOption) => () => {
     setActiveFilter(filter);
@@ -479,9 +487,14 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.title, { color: colors.text, fontSize: fs(32) }]}>History</Text>
         </View>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.timeline}>
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -569,29 +582,36 @@ export default function HistoryScreen() {
           </View>
         ) : (
           <View style={styles.timeline}>
-            {filteredEntries.map((entry) => (
-              <TouchableOpacity
-                key={entry.id}
-                style={[styles.entryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => setSelectedEntry(entry)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconContainer, { backgroundColor: getBackgroundColor(entry.type) }]}>
-                  {getIcon(entry.type)}
-                  {entry.type === 'symptom' && entry.details?.severity != null && (
-                    <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[entry.details.severity], borderColor: colors.surface }]} />
-                  )}
-                </View>
-                <View style={styles.entryContent}>
-                  <Text style={[styles.entryTitle, { color: colors.text, fontSize: fs(16) }]}>{entry.title}</Text>
-                  <Text style={[styles.entryDescription, { color: colors.textSecondary, fontSize: fs(14) }]} numberOfLines={2}>{entry.description}</Text>
-                  <Text style={[styles.entryTime, { color: colors.textTertiary, fontSize: fs(12) }]}>{formatDate(entry.timestamp)}</Text>
-                </View>
-                <View style={styles.chevronContainer}>
-                  <ChevronRight color={colors.textTertiary} size={18} />
-                </View>
-              </TouchableOpacity>
-            ))}
+            {filteredEntries.map((entry, index) => {
+              const anim = entryAnims.current[index] ?? new Animated.Value(1);
+              return (
+                <Animated.View
+                  key={entry.id}
+                  style={{ opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}
+                >
+                  <TouchableOpacity
+                    style={[styles.entryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => setSelectedEntry(entry)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.iconContainer, { backgroundColor: getBackgroundColor(entry.type) }]}>
+                      {getIcon(entry.type)}
+                      {entry.type === 'symptom' && entry.details?.severity != null && (
+                        <View style={[styles.severityDot, { backgroundColor: SEVERITY_COLORS[entry.details.severity], borderColor: colors.surface }]} />
+                      )}
+                    </View>
+                    <View style={styles.entryContent}>
+                      <Text style={[styles.entryTitle, { color: colors.text, fontSize: fs(16) }]}>{entry.title}</Text>
+                      <Text style={[styles.entryDescription, { color: colors.textSecondary, fontSize: fs(14) }]} numberOfLines={2}>{entry.description}</Text>
+                      <Text style={[styles.entryTime, { color: colors.textTertiary, fontSize: fs(12) }]}>{formatDate(entry.timestamp)}</Text>
+                    </View>
+                    <View style={styles.chevronContainer}>
+                      <ChevronRight color={colors.textTertiary} size={18} />
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -638,6 +658,27 @@ export default function HistoryScreen() {
         )}
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function SkeletonCard() {
+  const shimmer = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  return (
+    <Animated.View style={[styles.skeletonCard, { opacity: shimmer }]}>
+      <View style={styles.skeletonIcon} />
+      <View style={styles.skeletonLines}>
+        <View style={styles.skeletonLine1} />
+        <View style={styles.skeletonLine2} />
+      </View>
+    </Animated.View>
   );
 }
 
@@ -709,6 +750,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e5e7eb',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#d1d5db',
+    marginRight: 12,
+  },
+  skeletonLines: {
+    flex: 1,
+    gap: 8,
+  },
+  skeletonLine1: {
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: '#d1d5db',
+    width: '60%',
+  },
+  skeletonLine2: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#d1d5db',
+    width: '85%',
   },
   emptyState: {
     padding: 48,
