@@ -5,14 +5,7 @@
  * Every public function is safe to call on Android/web — it returns null / false.
  */
 import { Platform } from 'react-native';
-import {
-  isHealthDataAvailable,
-  requestAuthorization,
-  getMostRecentQuantitySample,
-  queryQuantitySamples,
-  queryWorkoutSamples,
-  getMostRecentWorkout,
-} from '@kingstinct/react-native-healthkit';
+import Constants from 'expo-constants';
 import {
   HK_IDENTIFIERS,
   READ_IDENTIFIERS,
@@ -23,13 +16,54 @@ import {
   type WorkoutRecord,
 } from './types';
 import { toVitalsSample, toCalendarDate, toWorkoutRecord } from './mappers';
+import { sendElevatedHeartRatePushCallable } from '@/lib/firebase';
+import { showLocalNotification } from '@/lib/notificationService';
+import { ELEVATED_HR_NOTIFICATION_SCREEN } from '@/lib/elevatedHeartRateNotification';
+
+// NitroModules (used by react-native-healthkit) crash in Expo Go.
+// Defer the require so it only runs in a real native build.
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let HealthKit: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let isHealthDataAvailable: (() => boolean) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let requestAuthorization: ((opts: any) => Promise<void>) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let getMostRecentQuantitySample: ((id: any) => Promise<any>) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let queryQuantitySamples: ((id: any, opts: any) => Promise<any[]>) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let queryWorkoutSamples: ((opts: any) => Promise<any[]>) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let getMostRecentWorkout: (() => Promise<any>) | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let UpdateFrequency: any = null;
+
+if (!isExpoGo) {
+  try {
+    const hk = require('@kingstinct/react-native-healthkit');
+    HealthKit = hk.default ?? hk;
+    isHealthDataAvailable = hk.isHealthDataAvailable;
+    requestAuthorization = hk.requestAuthorization;
+    getMostRecentQuantitySample = hk.getMostRecentQuantitySample;
+    queryQuantitySamples = hk.queryQuantitySamples;
+    queryWorkoutSamples = hk.queryWorkoutSamples;
+    getMostRecentWorkout = hk.getMostRecentWorkout;
+    UpdateFrequency = hk.UpdateFrequency;
+  } catch (e) {
+    if (__DEV__) console.warn('[HealthKit] Failed to load native module:', e);
+  }
+}
 
 // ── Availability ────────────────────────────────────────────────────
 
 export function checkAvailability(): boolean {
+  if (isExpoGo) return false;
   if (Platform.OS !== 'ios') return false;
   try {
-    return isHealthDataAvailable();
+    return isHealthDataAvailable?.() ?? false;
   } catch {
     return false;
   }
@@ -43,7 +77,7 @@ const WORKOUT_TYPE_IDENTIFIER = 'HKWorkoutTypeIdentifier';
 export async function requestHealthPermissions(): Promise<boolean> {
   if (!checkAvailability()) return false;
   try {
-    await requestAuthorization({
+    await requestAuthorization?.({
       toRead: [...READ_IDENTIFIERS, WORKOUT_TYPE_IDENTIFIER] as any,
       toShare: WRITE_IDENTIFIERS as any,
     });
@@ -83,7 +117,7 @@ async function safeGetLatest(
   key: keyof typeof HK_IDENTIFIERS,
 ): Promise<VitalsSample | null> {
   try {
-    const raw = await getMostRecentQuantitySample(HK_IDENTIFIERS[key] as any);
+    const raw = await getMostRecentQuantitySample?.(HK_IDENTIFIERS[key] as any);
     return toVitalsSample(key, raw as any);
   } catch {
     return null;
@@ -103,7 +137,7 @@ export async function getVitals(
 
   for (const key of keys) {
     try {
-      const samples = await queryQuantitySamples(HK_IDENTIFIERS[key] as any, {
+      const samples = await queryQuantitySamples?.(HK_IDENTIFIERS[key] as any, {
         limit: 0,
         filter: { date: { startDate: from, endDate: to } },
       });
@@ -130,7 +164,7 @@ export async function getDailyActivity(
   if (!checkAvailability()) return [];
 
   try {
-    const samples = await queryQuantitySamples(HK_IDENTIFIERS.stepCount as any, {
+    const samples = await queryQuantitySamples?.(HK_IDENTIFIERS.stepCount as any, {
       limit: 0,
       filter: { date: { startDate: from, endDate: to } },
     });
@@ -163,7 +197,7 @@ export async function getRecentWorkouts(limit = 20): Promise<WorkoutRecord[]> {
   if (!checkAvailability()) return [];
 
   try {
-    const proxies = await queryWorkoutSamples({
+    const proxies = await queryWorkoutSamples?.({
       limit,
       ascending: false,
     });
@@ -196,7 +230,7 @@ export async function getLatestWorkout(): Promise<WorkoutRecord | null> {
   if (!checkAvailability()) return null;
 
   try {
-    const proxy = await getMostRecentWorkout();
+    const proxy = await getMostRecentWorkout?.();
     if (!proxy) return null;
 
     let stats: Record<string, any> | undefined;
@@ -210,5 +244,54 @@ export async function getLatestWorkout(): Promise<WorkoutRecord | null> {
   } catch (err) {
     if (__DEV__) console.warn('[HealthKit] getMostRecentWorkout failed:', err);
     return null;
+  }
+}
+
+
+export async function subscribeToHighHeartRateEvent(): Promise<boolean> {
+  console.log('Subscribing to high heart rate event');
+  if (!checkAvailability() || !HealthKit) return false;
+
+  // Step 1: Request authorization for the category type
+  await HealthKit.requestAuthorization({ toRead: [HK_IDENTIFIERS.highHeartRateEvent] });
+
+  // Step 2: Enable background delivery (this is what wakes your app)
+  await HealthKit.enableBackgroundDelivery(
+    HK_IDENTIFIERS.highHeartRateEvent,
+    UpdateFrequency?.immediate
+  );
+
+  console.log('Subscribing to changes to high heart rate');
+  // Step 3: Subscribe to changes (this sets up the HKObserverQuery + event listener)
+  const subscription = HealthKit.subscribeToChanges(
+    HK_IDENTIFIERS.highHeartRateEvent, 
+    () => {
+      // This callback fires when a new high heart rate event lands in HealthKit.
+      void handleHighHeartRateEvent();
+    }
+  );
+
+  console.log('Subscribed to changes', subscription);
+  return subscription !== null;
+}
+
+export async function handleHighHeartRateEvent(): Promise<void> {
+  console.log('High heart rate detected');
+  const message = `We detected an elevated heart rate. Please log a symptom.`;
+  // Local notification (shows when app is in foreground)
+  await showLocalNotification(
+    'Elevated Heart Rate Detected',
+    message,
+    { screen: ELEVATED_HR_NOTIFICATION_SCREEN }
+  );
+
+  // Ask backend to send a push so the user gets it when app is in background or closed
+  try {
+    const { data } = await sendElevatedHeartRatePushCallable();
+    if (!data?.success && data?.error) {
+      console.warn('[handleHighHeartRateEvent] Push failed:', data.error);
+    }
+  } catch (err) {
+    console.warn('[handleHighHeartRateEvent] Push call failed:', err);
   }
 }

@@ -59,6 +59,7 @@ const bounceStyles = StyleSheet.create({
 });
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { logSymptom, getPreviousSymptom } from '@/lib/symptomService';
 import { fetchVitalsAroundSymptom } from '@/services/healthkit/healthSyncService';
 import { ArrowLeft, TrendingUp, Calendar, Clock } from 'lucide-react-native';
@@ -74,7 +75,7 @@ const SEVERITY_COLORS: Record<number, string> = {
   5: '#ef4444',
 };
 
-const SYMPTOM_TYPES = [
+export const SYMPTOM_TYPES = [
   'Dizziness',
   'Fainting',
   'Chest Pain',
@@ -184,6 +185,7 @@ interface PreviousSymptom {
 export default function SymptomEntry() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDark, colors, fs } = useTheme();
   const [selectedType, setSelectedType] = useState('');
   const [severity, setSeverity] = useState(3);
   const [description, setDescription] = useState('');
@@ -343,17 +345,17 @@ export default function SymptomEntry() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#1a1a1a" size={24} />
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Log Symptom</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Log Symptom</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -367,13 +369,14 @@ export default function SymptomEntry() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
           <View style={styles.section}>
-            <Text style={styles.label}>Symptom Type</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Symptom Type</Text>
             <View style={styles.typeGrid}>
               {SYMPTOM_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.typeButton,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
                     selectedType === type && styles.typeButtonSelected,
                   ]}
                   onPress={() => setSelectedType(type)}
@@ -381,6 +384,7 @@ export default function SymptomEntry() {
                   <Text
                     style={[
                       styles.typeButtonText,
+                      { color: colors.textSecondary },
                       selectedType === type && styles.typeButtonTextSelected,
                     ]}
                   >
@@ -392,19 +396,19 @@ export default function SymptomEntry() {
           </View>
 
           {previousSymptom && (
-            <View style={styles.previousSymptomBox}>
+            <View style={[styles.previousSymptomBox, { backgroundColor: isDark ? colors.surface : theme.primaryLight, borderColor: isDark ? colors.border : '#bfdbfe' }]}>
               <View style={styles.previousSymptomHeader}>
                 <TrendingUp color={theme.primary} size={18} />
                 <Text style={styles.previousSymptomTitle}>Previous Entry</Text>
               </View>
               <View style={styles.previousSymptomContent}>
                 <View style={styles.previousSymptomItem}>
-                  <Text style={styles.previousSymptomLabel}>Last severity:</Text>
-                  <Text style={styles.previousSymptomValue}>{previousSymptom.severity}/5</Text>
+                  <Text style={[styles.previousSymptomLabel, isDark && { color: colors.textSecondary }]}>Last severity:</Text>
+                  <Text style={[styles.previousSymptomValue, isDark && { color: colors.text }]}>{previousSymptom.severity}/5</Text>
                 </View>
                 <View style={styles.previousSymptomItem}>
-                  <Calendar color="#666" size={16} />
-                  <Text style={styles.previousSymptomDate}>
+                  <Calendar color={colors.textSecondary} size={16} />
+                  <Text style={[styles.previousSymptomDate, isDark && { color: colors.textSecondary }]}>
                     {formatDate(previousSymptom.occurredAt)}
                   </Text>
                 </View>
@@ -413,7 +417,7 @@ export default function SymptomEntry() {
           )}
 
           <View style={styles.section}>
-            <Text style={styles.label}>When did this symptom occur?</Text>
+            <Text style={[styles.label, { color: colors.text }]}>When did this symptom occur?</Text>
             {Platform.OS === 'web' ? (
               <input
                 type="datetime-local"
@@ -424,20 +428,21 @@ export default function SymptomEntry() {
                   padding: 14,
                   fontSize: 16,
                   borderRadius: 8,
-                  border: '1px solid #ddd',
-                  backgroundColor: '#f9f9f9',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.inputBg,
+                  color: colors.text,
                   fontFamily: 'system-ui',
                 }}
               />
             ) : (
               <View style={styles.dateTimeContainer}>
                 <TouchableOpacity
-                  style={styles.dateTimeButton}
+                  style={[styles.dateTimeButton, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
                   onPress={() => setShowPicker(true)}
                   activeOpacity={0.7}
                 >
                   <Clock color={theme.primary} size={20} />
-                  <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+                  <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatDateTime(occurredAt)}</Text>
                 </TouchableOpacity>
 
                 {showPicker && (
@@ -448,8 +453,8 @@ export default function SymptomEntry() {
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                       onChange={onPickerChange}
                       maximumDate={new Date()}
-                      textColor="black"
-                      accentColor="black"
+                      textColor={colors.text}
+                      accentColor={colors.text}
                       style={styles.dateTimePicker}
                     />
                   </View>
@@ -467,7 +472,7 @@ export default function SymptomEntry() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Severity (1-5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Severity (1-5)</Text>
             {Platform.OS === 'web' ? (
               <View>
                 <input
@@ -481,32 +486,29 @@ export default function SymptomEntry() {
                 />
                 <View style={styles.severityLabels}>
                   {[1, 2, 3, 4, 5].map((num) => (
-                    <Text key={num} style={[styles.severityLabel, { color: severity === num ? SEVERITY_COLORS[num] : '#bbb', fontWeight: severity === num ? '700' : '400' }]}>
+                    <Text key={num} style={[styles.severityLabel, { color: severity === num ? SEVERITY_COLORS[num] : colors.textTertiary, fontWeight: severity === num ? '700' : '400' }]}>
                       {num}
                     </Text>
                   ))}
                 </View>
               </View>
             ) : (
-              <View>
-                <Slider
-                  style={{ width: '100%', height: 40 }}
-                  minimumValue={1}
-                  maximumValue={5}
-                  step={1}
-                  value={severity}
-                  onValueChange={(val) => setSeverity(val)}
-                  minimumTrackTintColor={SEVERITY_COLORS[severity]}
-                  maximumTrackTintColor="#ddd"
-                  thumbTintColor={SEVERITY_COLORS[severity]}
-                />
-                <View style={styles.severityLabels}>
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <Text key={num} style={[styles.severityLabel, { color: severity === num ? SEVERITY_COLORS[num] : '#bbb', fontWeight: severity === num ? '700' : '400' }]}>
+              <View style={styles.severityContainer}>
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <TouchableOpacity
+                    key={num}
+                    style={[
+                      styles.severityButton,
+                      { borderColor: SEVERITY_COLORS[num], backgroundColor: colors.inputBg },
+                      severity === num && { backgroundColor: SEVERITY_COLORS[num], borderColor: SEVERITY_COLORS[num] },
+                    ]}
+                    onPress={() => setSeverity(num)}
+                  >
+                    <Text style={[styles.severityText, { color: severity === num ? '#fff' : SEVERITY_COLORS[num] }]}>
                       {num}
                     </Text>
-                  ))}
-                </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
             <View style={[styles.severityDescriptionBox, { borderColor: SEVERITY_COLORS[severity], backgroundColor: SEVERITY_COLORS[severity] + '18' }]}>
@@ -517,12 +519,13 @@ export default function SymptomEntry() {
           </View>
 
           <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
-            <Text style={styles.label}>Additional Details</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Additional Details</Text>
             <TextInput
-              style={styles.textArea}
+              style={[styles.textArea, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
               value={description}
               onChangeText={setDescription}
               placeholder="Describe your symptom in more detail..."
+              placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={4}
               textAlignVertical="top"

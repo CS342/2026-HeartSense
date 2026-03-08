@@ -39,8 +39,21 @@ function QuickBounce({ text, color, onDone }: { text: string; color: string; onD
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
-import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar, Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+
+const MOOD_EMOJIS: Record<number, string> = {
+  1: '😣', 2: '😔', 3: '😐', 4: '🙂', 5: '😄',
+};
+
+// Shared color scale: 1 = green → 5 = red
+const RATING_COLORS: Record<number, string> = {
+  1: '#dc2626',
+  2: '#ea580c',
+  3: '#eab308',
+  4: '#65a30d',
+  5: '#16a34a',
+};
 
 const ENERGY_LEVELS = [
   { value: 1, label: 'Very low', description: 'Barely able to get through the day' },
@@ -86,8 +99,30 @@ export default function WellbeingRating() {
   const notesSectionRef = useRef<View>(null);
   const notesFocusedRef = useRef(false);
   const scrollYRef = useRef(0);
+  const moodEmojiAnim = useRef(new Animated.Value(1)).current;
+  const prevMoodRef = useRef(moodRating);
+  const heartSubmitAnim = useRef(new Animated.Value(0)).current;
   const HEADER_APPROX = 100;
   const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    if (prevMoodRef.current !== moodRating) {
+      prevMoodRef.current = moodRating;
+      Animated.sequence([
+        Animated.spring(moodEmojiAnim, { toValue: 1.4, useNativeDriver: true, speed: 50, bounciness: 14 }),
+        Animated.spring(moodEmojiAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }),
+      ]).start();
+    }
+  }, [moodRating]);
+
+  useEffect(() => {
+    if (submitted) {
+      Animated.sequence([
+        Animated.spring(heartSubmitAnim, { toValue: 1.4, useNativeDriver: true, speed: 15, bounciness: 18 }),
+        Animated.spring(heartSubmitAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+      ]).start();
+    }
+  }, [submitted]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -229,7 +264,10 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  energyLevel === item.value && styles.scaleButtonSelected,
+                  energyLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setEnergyLevel(item.value)}
               >
@@ -244,7 +282,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedEnergy?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[energyLevel] }]}>{selectedEnergy?.label}</Text>
         </View>
 
         <View style={styles.section}>
@@ -259,7 +297,10 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  stressLevel === item.value && styles.scaleButtonSelected,
+                  stressLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setStressLevel(item.value)}
               >
@@ -274,7 +315,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedStress?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[stressLevel] }]}>{selectedStress?.label}</Text>
         </View>
 
         <View style={styles.section}>
@@ -283,13 +324,19 @@ export default function WellbeingRating() {
             <Text style={styles.label}>Mood (1–5)</Text>
           </View>
           <Text style={styles.description}>{selectedMood?.description}</Text>
+          <Animated.Text style={{ fontSize: 42, textAlign: 'center', marginBottom: 12, transform: [{ scale: moodEmojiAnim }] }}>
+            {MOOD_EMOJIS[moodRating]}
+          </Animated.Text>
           <View style={styles.scaleRow}>
             {MOOD_RATINGS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  moodRating === item.value && styles.scaleButtonSelected,
+                  moodRating === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setMoodRating(item.value)}
               >
@@ -304,7 +351,7 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedMood?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[moodRating] }]}>{selectedMood?.label}</Text>
         </View>
 
         <View ref={notesSectionRef} style={styles.section} collapsable={false}>
@@ -324,6 +371,9 @@ export default function WellbeingRating() {
 
         {submitted && (
           <View style={styles.successBanner}>
+            <Animated.View style={{ transform: [{ scale: heartSubmitAnim }], marginBottom: 6 }}>
+              <Heart color="#fff" size={30} fill="#fff" />
+            </Animated.View>
             <QuickBounce
               text="Rating Saved!"
               color="#fff"
@@ -408,10 +458,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     alignItems: 'center',
   },
-  scaleButtonSelected: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
-  },
   scaleButtonText: {
     fontSize: 18,
     fontWeight: '600',
@@ -422,7 +468,6 @@ const styles = StyleSheet.create({
   },
   scaleLabel: {
     fontSize: 13,
-    color: theme.primary,
     fontWeight: '500',
     marginTop: 8,
     textAlign: 'center',

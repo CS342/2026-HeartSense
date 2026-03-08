@@ -40,7 +40,7 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signUp } = useAuth();
+  const { signUp, resendVerification, refreshUser } = useAuth();
   const router = useRouter();
 
   const [verificationSent, setVerificationSent] = useState(false);
@@ -80,27 +80,32 @@ export default function Signup() {
   const handleResend = async () => {
     setInfo('');
     setError('');
+    setLoading(true);
     try {
-      // call via context
-      await (useAuth() as any).resendVerification();
+      await resendVerification();
       setInfo('Verification email re-sent. Check your inbox.');
     } catch (err: any) {
       setError(err.message || 'Failed to resend verification');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRefreshCheck = async () => {
     setInfo('');
     setError('');
+    setLoading(true);
     try {
-      const u = await (useAuth() as any).refreshUser();
+      const u = await refreshUser();
       if (u?.emailVerified) {
         router.replace('/');
       } else {
-        setInfo('Email not verified yet. Check your inbox or resend.');
+        setError('Email not verified yet. Please check your inbox and click the verification link.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to refresh user');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,17 +207,23 @@ export default function Signup() {
               </Text>
 
               <TouchableOpacity
-                style={[styles.button, styles.resendButton]}
+                style={[styles.button, styles.resendButton, loading && styles.buttonDisabled]}
                 onPress={handleResend}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Resend verification email</Text>
+                <Text style={styles.buttonText}>
+                  {loading ? 'Sending...' : 'Resend verification email'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.refreshButton]}
+                style={[styles.button, styles.refreshButton, loading && styles.buttonDisabled]}
                 onPress={handleRefreshCheck}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>I verified — refresh</Text>
+                <Text style={styles.buttonText}>
+                  {loading ? 'Checking...' : 'I verified — refresh'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity

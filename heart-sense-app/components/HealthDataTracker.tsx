@@ -15,13 +15,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { checkAvailability, requestHealthPermissions, getLatestVitals } from '@/services/healthkit';
 import { performDailySync } from '@/services/healthkit/healthSyncService';
 import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
+import { subscribeToHighHeartRateEvent } from '@/services/healthkit/HealthKitClient';
 
 export function HealthDataTracker() {
   const { user } = useAuth();
   const isSyncing = useRef(false);
   const appStateRef = useRef(AppState.currentState);
 
-  const runDailySync = async () => {
+  const runDailySync = async (subscribedToHighHeartRateEvent: boolean) => {
     if (isSyncing.current || !user) return;
     isSyncing.current = true;
     try {
@@ -45,16 +46,10 @@ export function HealthDataTracker() {
           respiratoryRate: null, steps: null, lastUpdated: null,
         };
 
-        /* For in-class demo, uncomment to inject a fake HR so the notification path can be tested. */
-        // if (__DEV__ && !vitals.heartRate) {
-        //   console.log('[HealthDataTracker] DEV: no HR sample — injecting 120 bpm stub');
-        //   vitals = {
-        //     ...vitals,
-        //     heartRate: { type: 'heartRate', value: 120, unit: 'bpm', startDate: '', endDate: '' },
-        //   };
-        // }
-        console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
-        await checkAndNotifyIfElevated(user.uid, vitals);
+        if (!subscribedToHighHeartRateEvent) {
+          console.log('[HealthDataTracker] Checking HR:', vitals.heartRate?.value ?? 'null', 'bpm');
+          await checkAndNotifyIfElevated(user.uid, vitals);
+        }
       }
     } catch (err) {
       if (__DEV__) console.warn('[HealthDataTracker] Daily sync error:', err);
@@ -74,10 +69,15 @@ export function HealthDataTracker() {
     (async () => {
       const granted = await requestHealthPermissions();
       if (__DEV__) console.log('[HealthDataTracker] Permissions requested, granted:', granted);
+
+      // Subscribe to high heart rate event
+      const subscribed = await subscribeToHighHeartRateEvent();
+      console.log('Subscribed to high heart rate event:', subscribed);
+
       if (granted && !cancelled) {
         // Brief pause so iOS has time to persist the user's permission choices
         await new Promise((r) => setTimeout(r, 1500));
-        if (!cancelled) runDailySync();
+        if (!cancelled) runDailySync(subscribed);
       }
     })();
 
@@ -93,7 +93,7 @@ export function HealthDataTracker() {
         appStateRef.current.match(/inactive|background/) &&
         nextState === 'active'
       ) {
-        runDailySync();
+        runDailySync(false);
       }
       appStateRef.current = nextState;
     });
