@@ -38,6 +38,7 @@ function QuickBounce({ text, color, onDone }: { text: string; color: string; onD
 }
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
 import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar, Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
@@ -82,6 +83,7 @@ const MOOD_RATINGS = [
 export default function WellbeingRating() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDark, colors } = useTheme();
   const [energyLevel, setEnergyLevel] = useState(3);
   const [stressLevel, setStressLevel] = useState(3);
   const [moodRating, setMoodRating] = useState(3);
@@ -209,17 +211,17 @@ export default function WellbeingRating() {
   const selectedMood = MOOD_RATINGS.find((m) => m.value === moodRating);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#1a1a1a" size={24} />
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Well-being Rating</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Well-being Rating</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -233,20 +235,20 @@ export default function WellbeingRating() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
         {previousRating && (
-          <View style={styles.previousBox}>
+          <View style={[styles.previousBox, { backgroundColor: isDark ? '#1e2a3a' : theme.primaryLight, borderColor: isDark ? '#2a4a6a' : '#bfdbfe' }]}>
             <View style={styles.previousHeader}>
               <TrendingUp color={theme.primary} size={18} />
               <Text style={styles.previousTitle}>Previous Rating</Text>
             </View>
             <View style={styles.previousContent}>
               <View style={styles.previousRow}>
-                <Text style={styles.previousLabel}>Energy: {previousRating.energyLevel}/5</Text>
-                <Text style={styles.previousLabel}>Mood: {previousRating.moodRating}/5</Text>
-                <Text style={styles.previousLabel}>Stress: {previousRating.stressLevel}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Energy: {previousRating.energyLevel}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Mood: {previousRating.moodRating}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Stress: {previousRating.stressLevel}/5</Text>
               </View>
               <View style={styles.previousDateRow}>
-                <Calendar color="#666" size={14} />
-                <Text style={styles.previousDate}>{formatPreviousDate(previousRating.recordedAt)}</Text>
+                <Calendar color={colors.textSecondary} size={14} />
+                <Text style={[styles.previousDate, { color: isDark ? '#60a5fa' : '#1e40af' }]}>{formatPreviousDate(previousRating.recordedAt)}</Text>
               </View>
             </View>
           </View>
@@ -255,15 +257,16 @@ export default function WellbeingRating() {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Zap color={theme.primary} size={20} />
-            <Text style={styles.label}>Energy level (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Energy level (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedEnergy?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedEnergy?.description}</Text>
           <View style={styles.scaleRow}>
             {ENERGY_LEVELS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
                   energyLevel === item.value && {
                     backgroundColor: RATING_COLORS[item.value],
                     borderColor: RATING_COLORS[item.value],
@@ -274,6 +277,7 @@ export default function WellbeingRating() {
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     energyLevel === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -288,15 +292,16 @@ export default function WellbeingRating() {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Wind color={theme.primary} size={20} />
-            <Text style={styles.label}>Stress level (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Stress level (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedStress?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedStress?.description}</Text>
           <View style={styles.scaleRow}>
             {STRESS_LEVELS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
                   stressLevel === item.value && {
                     backgroundColor: RATING_COLORS[item.value],
                     borderColor: RATING_COLORS[item.value],
@@ -307,6 +312,7 @@ export default function WellbeingRating() {
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     stressLevel === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -321,9 +327,9 @@ export default function WellbeingRating() {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <PersonStanding color={theme.primary} size={20} />
-            <Text style={styles.label}>Mood (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Mood (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedMood?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedMood?.description}</Text>
           <Animated.Text style={{ fontSize: 42, textAlign: 'center', marginBottom: 12, transform: [{ scale: moodEmojiAnim }] }}>
             {MOOD_EMOJIS[moodRating]}
           </Animated.Text>
@@ -333,6 +339,7 @@ export default function WellbeingRating() {
                 key={item.value}
                 style={[
                   styles.scaleButton,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
                   moodRating === item.value && {
                     backgroundColor: RATING_COLORS[item.value],
                     borderColor: RATING_COLORS[item.value],
@@ -343,6 +350,7 @@ export default function WellbeingRating() {
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     moodRating === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -355,12 +363,13 @@ export default function WellbeingRating() {
         </View>
 
         <View ref={notesSectionRef} style={styles.section} collapsable={false}>
-          <Text style={styles.label}>Notes (optional)</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Notes (optional)</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
             value={notes}
             onChangeText={setNotes}
             placeholder="Add any notes about how you're feeling..."
+            placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -399,7 +408,6 @@ export default function WellbeingRating() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -407,7 +415,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
   },
   backButton: {
     padding: 4,
@@ -415,7 +422,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
   },
   content: {
     flex: 1,
@@ -437,11 +443,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
   },
   description: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 12,
   },
   scaleRow: {
@@ -454,14 +458,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f9f9f9',
     alignItems: 'center',
   },
   scaleButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
   },
   scaleButtonTextSelected: {
     color: '#fff',
@@ -474,21 +475,17 @@ const styles = StyleSheet.create({
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
     minHeight: 120,
     marginTop: 4,
   },
   previousBox: {
-    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
   },
   previousHeader: {
     flexDirection: 'row',
@@ -511,7 +508,6 @@ const styles = StyleSheet.create({
   previousLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e40af',
   },
   previousDateRow: {
     flexDirection: 'row',
@@ -520,7 +516,6 @@ const styles = StyleSheet.create({
   },
   previousDate: {
     fontSize: 13,
-    color: '#1e40af',
   },
   successBanner: {
     backgroundColor: '#7c3aed',
@@ -538,7 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonDisabled: {
-    backgroundColor: '#99c2e6',
+    opacity: 0.5,
   },
   submitButtonText: {
     color: '#fff',
