@@ -47,6 +47,9 @@ import {
   Scale,
   Pencil,
   Check,
+  ChevronDown,
+  ChevronUp,
+  FlaskConical,
   Moon,
   Type,
 } from "lucide-react-native";
@@ -150,6 +153,8 @@ export default function ProfileScreen() {
     title: string;
     content: string;
   }>({ visible: false, title: "", content: "" });
+  const [devSectionExpanded, setDevSectionExpanded] = useState(false);
+  const [testingNotification, setTestingNotification] = useState(false);
 
   const defaultDobDate = (() => {
     const d = new Date();
@@ -469,6 +474,64 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const triggerTestDailyReminder = async () => {
+    if (!user || testingNotification) return;
+    setTestingNotification(true);
+    try {
+      const now = Timestamp.now();
+      const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
+      await setDoc(doc(collection(db, "engagement_alerts")), {
+        userId: user.uid,
+        alertType: "daily_reminder",
+        title: "Daily Health Check-in",
+        message: "Take a moment to log how you're feeling today. Regular tracking helps you and your healthcare team spot patterns.",
+        priority: "low",
+        isRead: false,
+        isDismissed: false,
+        createdAt: now,
+        expiresAt,
+        metadata: { test: true },
+      });
+
+      Alert.alert("Success", "Daily reminder notification triggered! Check your notifications.");
+    } catch (error) {
+      console.error("Error triggering daily reminder:", error);
+      Alert.alert("Error", "Failed to trigger daily reminder notification.");
+    } finally {
+      setTestingNotification(false);
+    }
+  };
+
+  const triggerTestInactivityAlert = async () => {
+    if (!user || testingNotification) return;
+    setTestingNotification(true);
+    try {
+      const now = Timestamp.now();
+      const expiresAt = Timestamp.fromDate(new Date(Date.now() + 72 * 60 * 60 * 1000));
+
+      await setDoc(doc(collection(db, "engagement_alerts")), {
+        userId: user.uid,
+        alertType: "inactivity_warning",
+        title: "We Miss You! It's been 3 days",
+        message: "Even a quick check-in helps track your health journey.",
+        priority: "medium",
+        isRead: false,
+        isDismissed: false,
+        createdAt: now,
+        expiresAt,
+        metadata: { daysInactive: 3, test: true },
+      });
+
+      Alert.alert("Success", "Inactivity alert notification triggered! Check your notifications.");
+    } catch (error) {
+      console.error("Error triggering inactivity alert:", error);
+      Alert.alert("Error", "Failed to trigger inactivity alert notification.");
+    } finally {
+      setTestingNotification(false);
+    }
   };
 
   return (
@@ -978,6 +1041,55 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Developer Testing Section */}
+        <View style={styles.devSection}>
+          <TouchableOpacity
+            style={styles.devSectionHeader}
+            onPress={() => setDevSectionExpanded(!devSectionExpanded)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.devSectionHeaderLeft}>
+              <FlaskConical color="#9ca3af" size={16} />
+              <Text style={styles.devSectionTitle}>Developer Testing</Text>
+            </View>
+            {devSectionExpanded ? (
+              <ChevronUp color="#9ca3af" size={18} />
+            ) : (
+              <ChevronDown color="#9ca3af" size={18} />
+            )}
+          </TouchableOpacity>
+
+          {devSectionExpanded && (
+            <View style={styles.devSectionContent}>
+              <Text style={styles.devSectionDescription}>
+                Test push notifications. Make sure you have notification permissions enabled.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.devButton, testingNotification && styles.devButtonDisabled]}
+                onPress={triggerTestDailyReminder}
+                disabled={testingNotification}
+              >
+                <Bell color="#6b7280" size={16} />
+                <Text style={styles.devButtonText}>
+                  {testingNotification ? "Sending..." : "Test Daily Check-in Notification"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.devButton, testingNotification && styles.devButtonDisabled]}
+                onPress={triggerTestInactivityAlert}
+                disabled={testingNotification}
+              >
+                <Bell color="#6b7280" size={16} />
+                <Text style={styles.devButtonText}>
+                  {testingNotification ? "Sending..." : "Test Inactivity Alert Notification"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1279,6 +1391,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.primary,
     fontWeight: "600",
+  },
+  devSection: {
+    marginTop: 24,
+    marginHorizontal: 16,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    borderStyle: "dashed",
+    backgroundColor: "#fafafa",
+  },
+  devSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+  },
+  devSectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  devSectionTitle: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#9ca3af",
+  },
+  devSectionContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  devSectionDescription: {
+    fontSize: 12,
+    color: "#9ca3af",
+    marginBottom: 4,
+  },
+  devButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#f3f4f6",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  devButtonDisabled: {
+    opacity: 0.5,
+  },
+  devButtonText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6b7280",
   },
   fontSizeButton: {
     flex: 1,
