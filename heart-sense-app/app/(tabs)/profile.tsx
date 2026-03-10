@@ -486,8 +486,8 @@ export default function ProfileScreen() {
       await setDoc(doc(collection(db, "engagement_alerts")), {
         userId: user.uid,
         alertType: "daily_reminder",
-        title: "Daily Health Check-in",
-        message: "Take a moment to log how you're feeling today. Regular tracking helps you and your healthcare team spot patterns.",
+        title: "Good morning! 🌅",
+        message: "Time for your daily check-in. Log your well-being and any symptoms.",
         priority: "low",
         isRead: false,
         isDismissed: false,
