@@ -210,26 +210,52 @@ export default function OnboardingScreen() {
                 />
               ) : (
                 <>
-                  <DateTimePicker
-                    value={dobDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onDobPickerChange}
-                    maximumDate={new Date()}
-                    minimumDate={
-                      new Date(new Date().setFullYear(new Date().getFullYear() - 120))
-                    }
-                    textColor="black"
-                    accentColor="black"
-                    style={styles.datePicker}
-                  />
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      style={styles.donePickerButton}
-                      onPress={() => setShowDobPicker(false)}
+                  <TouchableOpacity
+                    style={styles.input}
+                    onPress={() => setShowDobPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={
+                        dateOfBirth
+                          ? [styles.fieldValue, { color: "#000", fontSize: 16 }]
+                          : [styles.inputPlaceholder, { color: "#999", fontSize: 16 }]
+                      }
                     >
-                      <Text style={styles.donePickerText}>Done</Text>
-                    </TouchableOpacity>
+                      {dateOfBirth
+                        ? (parseLocalDate(dateOfBirth) ?? new Date()).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                        : "Tap to select date"}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDobPicker && (
+                    <>
+                      <DateTimePicker
+                        value={dobDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={onDobPickerChange}
+                        maximumDate={new Date()}
+                        minimumDate={
+                          new Date(new Date().setFullYear(new Date().getFullYear() - 120))
+                        }
+                        textColor="black"
+                        accentColor="black"
+                        style={styles.datePicker}
+                      />
+
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          style={styles.donePickerButton}
+                          onPress={() => setShowDobPicker(false)}
+                        >
+                          <Text style={styles.donePickerText}>Done</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -506,4 +532,17 @@ const styles = StyleSheet.create({
   datePicker: {
     height: 200,
   },
+  fieldContent: { flex: 1, minWidth: 0 },
+  // fieldLabel: { fontSize: 12, color: "#666", marginBottom: 4 },
+  fieldValue: { fontSize: 16, color: "#1a1a1a" },
+  /*input: {
+    fontSize: 16,
+    color: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 8,
+    backgroundColor: "#f9f9f9",
+  },*/
+  inputPlaceholder: { fontSize: 16, color: "#999" },
 });

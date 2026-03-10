@@ -60,12 +60,13 @@ const waveStyles = StyleSheet.create({
 });
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { logActivity } from '@/lib/symptomService';
 import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
 
-const ACTIVITY_TYPES = [
+export const ACTIVITY_TYPES = [
   'Exercise',
   'Walking',
   'Running',
@@ -87,6 +88,7 @@ const INTENSITY_LEVELS = [
 export default function ActivityEntry() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDark, colors, fs } = useTheme();
   const [selectedType, setSelectedType] = useState('');
   const [intensity, setIntensity] = useState<'low' | 'moderate' | 'high'>('moderate');
   const [duration, setDuration] = useState('');
@@ -198,17 +200,17 @@ export default function ActivityEntry() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#1a1a1a" size={24} />
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Log Activity</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Log Activity</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -222,13 +224,14 @@ export default function ActivityEntry() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
           <View style={styles.section}>
-            <Text style={styles.label}>Activity Type</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Activity Type</Text>
             <View style={styles.typeGrid}>
               {ACTIVITY_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.typeButton,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
                     selectedType === type && styles.typeButtonSelected,
                   ]}
                   onPress={() => setSelectedType(type)}
@@ -236,6 +239,7 @@ export default function ActivityEntry() {
                   <Text
                     style={[
                       styles.typeButtonText,
+                      { color: colors.textSecondary },
                       selectedType === type && styles.typeButtonTextSelected,
                     ]}
                   >
@@ -247,13 +251,14 @@ export default function ActivityEntry() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Intensity</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Intensity</Text>
             <View style={styles.intensityContainer}>
               {INTENSITY_LEVELS.map((level) => (
                 <TouchableOpacity
                   key={level.value}
                   style={[
                     styles.intensityButton,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
                     intensity === level.value && {
                       backgroundColor: level.color,
                       borderColor: level.color,
@@ -264,6 +269,7 @@ export default function ActivityEntry() {
                   <Text
                     style={[
                       styles.intensityText,
+                      { color: colors.textSecondary },
                       intensity === level.value && styles.intensityTextSelected,
                     ]}
                   >
@@ -275,7 +281,7 @@ export default function ActivityEntry() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>When did you perform this activity?</Text>
+            <Text style={[styles.label, { color: colors.text }]}>When did you perform this activity?</Text>
             {Platform.OS === 'web' ? (
               <input
                 type="datetime-local"
@@ -294,12 +300,12 @@ export default function ActivityEntry() {
             ) : (
               <>
                 <TouchableOpacity
-                  style={styles.dateTimeButton}
+                  style={[styles.dateTimeButton, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
                   onPress={() => setShowPicker(true)}
                   activeOpacity={0.7}
                 >
                   <Calendar color={theme.primary} size={20} />
-                  <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+                  <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatDateTime(occurredAt)}</Text>
                 </TouchableOpacity>
                 {showPicker && (
                   <View style={styles.dateTimePickerWrapper}>
@@ -309,8 +315,8 @@ export default function ActivityEntry() {
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                       onChange={onPickerChange}
                       maximumDate={new Date()}
-                      textColor="black"
-                      accentColor="black"
+                      textColor={colors.text}
+                      accentColor={colors.text}
                       style={styles.dateTimePicker}
                     />
                   </View>
@@ -328,12 +334,13 @@ export default function ActivityEntry() {
           </View>
 
           <View ref={durationSectionRef} style={styles.section} collapsable={false}>
-            <Text style={styles.label}>Duration (minutes)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Duration (minutes)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
               value={duration}
               onChangeText={setDuration}
               placeholder="Enter duration in minutes"
+              placeholderTextColor={colors.textTertiary}
               keyboardType="number-pad"
               onFocus={() => { durationFocusedRef.current = true; }}
               onBlur={() => { durationFocusedRef.current = false; }}
@@ -341,12 +348,13 @@ export default function ActivityEntry() {
           </View>
 
           <View ref={textAreaSectionRef} style={styles.section} collapsable={false}>
-            <Text style={styles.label}>Additional Details</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Additional Details</Text>
             <TextInput
-              style={styles.textArea}
+              style={[styles.textArea, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
               value={description}
               onChangeText={setDescription}
               placeholder="Describe your activity in more detail..."
+              placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={4}
               textAlignVertical="top"

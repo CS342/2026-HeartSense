@@ -38,9 +38,23 @@ function QuickBounce({ text, color, onDone }: { text: string; color: string; onD
 }
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { logWellbeingRating, getPreviousWellbeing } from '@/lib/symptomService';
-import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Zap, Wind, PersonStanding, TrendingUp, Calendar, Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+
+const MOOD_EMOJIS: Record<number, string> = {
+  1: '😣', 2: '😔', 3: '😐', 4: '🙂', 5: '😄',
+};
+
+// Shared color scale: 1 = green → 5 = red
+const RATING_COLORS: Record<number, string> = {
+  1: '#dc2626',
+  2: '#ea580c',
+  3: '#eab308',
+  4: '#65a30d',
+  5: '#16a34a',
+};
 
 const ENERGY_LEVELS = [
   { value: 1, label: 'Very low', description: 'Barely able to get through the day' },
@@ -69,6 +83,7 @@ const MOOD_RATINGS = [
 export default function WellbeingRating() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDark, colors } = useTheme();
   const [energyLevel, setEnergyLevel] = useState(3);
   const [stressLevel, setStressLevel] = useState(3);
   const [moodRating, setMoodRating] = useState(3);
@@ -86,8 +101,30 @@ export default function WellbeingRating() {
   const notesSectionRef = useRef<View>(null);
   const notesFocusedRef = useRef(false);
   const scrollYRef = useRef(0);
+  const moodEmojiAnim = useRef(new Animated.Value(1)).current;
+  const prevMoodRef = useRef(moodRating);
+  const heartSubmitAnim = useRef(new Animated.Value(0)).current;
   const HEADER_APPROX = 100;
   const PAD_ABOVE_KEYBOARD = 20;
+
+  useEffect(() => {
+    if (prevMoodRef.current !== moodRating) {
+      prevMoodRef.current = moodRating;
+      Animated.sequence([
+        Animated.spring(moodEmojiAnim, { toValue: 1.4, useNativeDriver: true, speed: 50, bounciness: 14 }),
+        Animated.spring(moodEmojiAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }),
+      ]).start();
+    }
+  }, [moodRating]);
+
+  useEffect(() => {
+    if (submitted) {
+      Animated.sequence([
+        Animated.spring(heartSubmitAnim, { toValue: 1.4, useNativeDriver: true, speed: 15, bounciness: 18 }),
+        Animated.spring(heartSubmitAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+      ]).start();
+    }
+  }, [submitted]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -174,17 +211,17 @@ export default function WellbeingRating() {
   const selectedMood = MOOD_RATINGS.find((m) => m.value === moodRating);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#1a1a1a" size={24} />
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Well-being Rating</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Well-being Rating</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -198,20 +235,20 @@ export default function WellbeingRating() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
         {previousRating && (
-          <View style={styles.previousBox}>
+          <View style={[styles.previousBox, { backgroundColor: isDark ? '#1e2a3a' : theme.primaryLight, borderColor: isDark ? '#2a4a6a' : '#bfdbfe' }]}>
             <View style={styles.previousHeader}>
               <TrendingUp color={theme.primary} size={18} />
               <Text style={styles.previousTitle}>Previous Rating</Text>
             </View>
             <View style={styles.previousContent}>
               <View style={styles.previousRow}>
-                <Text style={styles.previousLabel}>Energy: {previousRating.energyLevel}/5</Text>
-                <Text style={styles.previousLabel}>Mood: {previousRating.moodRating}/5</Text>
-                <Text style={styles.previousLabel}>Stress: {previousRating.stressLevel}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Energy: {previousRating.energyLevel}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Mood: {previousRating.moodRating}/5</Text>
+                <Text style={[styles.previousLabel, { color: isDark ? '#60a5fa' : '#1e40af' }]}>Stress: {previousRating.stressLevel}/5</Text>
               </View>
               <View style={styles.previousDateRow}>
-                <Calendar color="#666" size={14} />
-                <Text style={styles.previousDate}>{formatPreviousDate(previousRating.recordedAt)}</Text>
+                <Calendar color={colors.textSecondary} size={14} />
+                <Text style={[styles.previousDate, { color: isDark ? '#60a5fa' : '#1e40af' }]}>{formatPreviousDate(previousRating.recordedAt)}</Text>
               </View>
             </View>
           </View>
@@ -220,22 +257,27 @@ export default function WellbeingRating() {
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Zap color={theme.primary} size={20} />
-            <Text style={styles.label}>Energy level (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Energy level (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedEnergy?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedEnergy?.description}</Text>
           <View style={styles.scaleRow}>
             {ENERGY_LEVELS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  energyLevel === item.value && styles.scaleButtonSelected,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  energyLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setEnergyLevel(item.value)}
               >
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     energyLevel === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -244,28 +286,33 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedEnergy?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[energyLevel] }]}>{selectedEnergy?.label}</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <Wind color={theme.primary} size={20} />
-            <Text style={styles.label}>Stress level (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Stress level (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedStress?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedStress?.description}</Text>
           <View style={styles.scaleRow}>
             {STRESS_LEVELS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  stressLevel === item.value && styles.scaleButtonSelected,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  stressLevel === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setStressLevel(item.value)}
               >
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     stressLevel === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -274,28 +321,36 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedStress?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[stressLevel] }]}>{selectedStress?.label}</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.labelRow}>
             <PersonStanding color={theme.primary} size={20} />
-            <Text style={styles.label}>Mood (1–5)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Mood (1–5)</Text>
           </View>
-          <Text style={styles.description}>{selectedMood?.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{selectedMood?.description}</Text>
+          <Animated.Text style={{ fontSize: 42, textAlign: 'center', marginBottom: 12, transform: [{ scale: moodEmojiAnim }] }}>
+            {MOOD_EMOJIS[moodRating]}
+          </Animated.Text>
           <View style={styles.scaleRow}>
             {MOOD_RATINGS.map((item) => (
               <TouchableOpacity
                 key={item.value}
                 style={[
                   styles.scaleButton,
-                  moodRating === item.value && styles.scaleButtonSelected,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  moodRating === item.value && {
+                    backgroundColor: RATING_COLORS[item.value],
+                    borderColor: RATING_COLORS[item.value],
+                  },
                 ]}
                 onPress={() => setMoodRating(item.value)}
               >
                 <Text
                   style={[
                     styles.scaleButtonText,
+                    { color: colors.textSecondary },
                     moodRating === item.value && styles.scaleButtonTextSelected,
                   ]}
                 >
@@ -304,16 +359,17 @@ export default function WellbeingRating() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.scaleLabel}>{selectedMood?.label}</Text>
+          <Text style={[styles.scaleLabel, { color: RATING_COLORS[moodRating] }]}>{selectedMood?.label}</Text>
         </View>
 
         <View ref={notesSectionRef} style={styles.section} collapsable={false}>
-          <Text style={styles.label}>Notes (optional)</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Notes (optional)</Text>
           <TextInput
-            style={styles.textArea}
+            style={[styles.textArea, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
             value={notes}
             onChangeText={setNotes}
             placeholder="Add any notes about how you're feeling..."
+            placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -324,6 +380,9 @@ export default function WellbeingRating() {
 
         {submitted && (
           <View style={styles.successBanner}>
+            <Animated.View style={{ transform: [{ scale: heartSubmitAnim }], marginBottom: 6 }}>
+              <Heart color="#fff" size={30} fill="#fff" />
+            </Animated.View>
             <QuickBounce
               text="Rating Saved!"
               color="#fff"
@@ -349,7 +408,6 @@ export default function WellbeingRating() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -357,7 +415,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
   },
   backButton: {
     padding: 4,
@@ -365,7 +422,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
   },
   content: {
     flex: 1,
@@ -387,11 +443,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
   },
   description: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 12,
   },
   scaleRow: {
@@ -404,46 +458,34 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f9f9f9',
     alignItems: 'center',
-  },
-  scaleButtonSelected: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
   },
   scaleButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
   },
   scaleButtonTextSelected: {
     color: '#fff',
   },
   scaleLabel: {
     fontSize: 13,
-    color: theme.primary,
     fontWeight: '500',
     marginTop: 8,
     textAlign: 'center',
   },
   textArea: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
     minHeight: 120,
     marginTop: 4,
   },
   previousBox: {
-    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
   },
   previousHeader: {
     flexDirection: 'row',
@@ -466,7 +508,6 @@ const styles = StyleSheet.create({
   previousLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e40af',
   },
   previousDateRow: {
     flexDirection: 'row',
@@ -475,7 +516,6 @@ const styles = StyleSheet.create({
   },
   previousDate: {
     fontSize: 13,
-    color: '#1e40af',
   },
   successBanner: {
     backgroundColor: '#7c3aed',
@@ -493,7 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonDisabled: {
-    backgroundColor: '#99c2e6',
+    opacity: 0.5,
   },
   submitButtonText: {
     color: '#fff',

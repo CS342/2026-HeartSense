@@ -106,8 +106,8 @@ export const testDailyReminder = onRequest(async (req, res) => {
     const alertRef = await db.collection("engagement_alerts").add({
       userId,
       alertType: "daily_reminder",
-      title: "Daily Health Check-in",
-      message: "Take a moment to log how you're feeling today. Regular tracking helps you and your healthcare team spot patterns.",
+      title: "Good morning! 🌅",
+      message: "Time for your daily check-in. Log your well-being and any symptoms.",
       priority: "low",
       isRead: false,
       isDismissed: false,

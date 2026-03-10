@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Heart } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
 
@@ -26,6 +27,17 @@ export default function AppLogo({
   const titleSize  = { small: 16, medium: 22, large: 30 }[size];
   const subtitleSize = { small: 10, medium: 12, large: 13 }[size];
 
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.13, duration: 500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.delay(600),
+      ])
+    ).start();
+  }, []);
+
   const outerBg  = isLight ? 'rgba(255,255,255,0.15)' : 'rgba(140,11,11,0.08)';
   const middleBg = isLight ? 'rgba(255,255,255,0.25)' : 'rgba(140,11,11,0.15)';
   const innerBg  = isLight ? 'rgba(255,255,255,0.95)' : theme.primary;
@@ -37,9 +49,9 @@ export default function AppLogo({
     <View style={styles.wrapper}>
       <View style={[styles.outerRing, { width: dims.outer, height: dims.outer, borderRadius: dims.outer / 2, backgroundColor: outerBg }]}>
         <View style={[styles.middleRing, { width: dims.middle, height: dims.middle, borderRadius: dims.middle / 2, backgroundColor: middleBg }]}>
-          <View style={[styles.innerCircle, { width: dims.inner, height: dims.inner, borderRadius: dims.inner / 2, backgroundColor: innerBg, shadowColor: isLight ? '#fff' : theme.primary }]}>
+          <Animated.View style={[styles.innerCircle, { width: dims.inner, height: dims.inner, borderRadius: dims.inner / 2, backgroundColor: innerBg, shadowColor: isLight ? '#fff' : theme.primary, transform: [{ scale: pulseAnim }] }]}>
             <Heart color={heartColor} size={dims.icon} strokeWidth={2.5} fill={heartColor} />
-          </View>
+          </Animated.View>
         </View>
       </View>
 
@@ -64,6 +76,7 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     gap: 10,
+    marginBottom: 10,
   },
   outerRing: {
     justifyContent: 'center',

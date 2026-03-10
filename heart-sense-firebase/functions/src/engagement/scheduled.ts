@@ -74,9 +74,8 @@ export const dailyReminderCheck = onSchedule(
         await createEngagementAlert(
           userId,
           "daily_reminder",
-          "Daily Health Check-in",
-          "Take a moment to log how you're feeling today. " +
-          "Regular tracking helps you and your healthcare team spot patterns.",
+          "Good morning! 🌅",
+          "Time for your daily check-in. Log your well-being and any symptoms.",
           "low",
           {type: "daily_reminder"},
           24 // Expires in 24 hours

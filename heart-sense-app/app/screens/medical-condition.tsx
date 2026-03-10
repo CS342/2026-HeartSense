@@ -38,12 +38,13 @@ function QuickBounce({ text, color, onDone }: { text: string; color: string; onD
 }
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { logMedicalChange } from '@/lib/symptomService';
 import { ArrowLeft, Calendar } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '@/theme/colors';
 
-const CONDITION_TYPES = [
+export const CONDITION_TYPES = [
   'New Medication',
   'Medication Change',
   'Medication Stopped',
@@ -58,6 +59,7 @@ const CONDITION_TYPES = [
 export default function MedicalCondition() {
   const { user } = useAuth();
   const router = useRouter();
+  const { isDark, colors, fs } = useTheme();
   const [selectedType, setSelectedType] = useState('');
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(new Date());
@@ -153,17 +155,17 @@ export default function MedicalCondition() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#1a1a1a" size={24} />
+            <ArrowLeft color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Medical Change</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Medical Change</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -176,20 +178,21 @@ export default function MedicalCondition() {
           keyboardDismissMode="on-drag"
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 60 + keyboardHeight }]}
         >
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
+          <View style={[styles.infoBox, { backgroundColor: isDark ? colors.surface : theme.primaryLight, borderColor: isDark ? colors.border : '#bfdbfe' }]}>
+            <Text style={[styles.infoText, { color: isDark ? colors.textSecondary : theme.primary }]}>
               Use this form to report any changes in your medical condition, medications, or healthcare visits.
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Type of Change</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Type of Change</Text>
             <View style={styles.typeGrid}>
               {CONDITION_TYPES.map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.typeButton,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
                     selectedType === type && styles.typeButtonSelected,
                   ]}
                   onPress={() => setSelectedType(type)}
@@ -197,6 +200,7 @@ export default function MedicalCondition() {
                   <Text
                     style={[
                       styles.typeButtonText,
+                      { color: colors.textSecondary },
                       selectedType === type && styles.typeButtonTextSelected,
                     ]}
                   >
@@ -208,14 +212,14 @@ export default function MedicalCondition() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>When did this change occur?</Text>
+            <Text style={[styles.label, { color: colors.text }]}>When did this change occur?</Text>
             <TouchableOpacity
-              style={styles.dateTimeButton}
+              style={[styles.dateTimeButton, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
               onPress={() => setShowPicker(true)}
               activeOpacity={0.7}
             >
               <Calendar color={theme.primary} size={20} />
-              <Text style={styles.dateTimeText}>{formatDateTime(occurredAt)}</Text>
+              <Text style={[styles.dateTimeText, { color: colors.text }]}>{formatDateTime(occurredAt)}</Text>
             </TouchableOpacity>
             {showPicker && (
               <View style={styles.dateTimePickerWrapper}>
@@ -225,8 +229,8 @@ export default function MedicalCondition() {
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onPickerChange}
                   maximumDate={new Date()}
-                  textColor='black'
-                  accentColor='black'
+                  textColor={colors.text}
+                  accentColor={colors.text}
                   style={styles.dateTimePicker}
                 />
               </View>
@@ -242,19 +246,20 @@ export default function MedicalCondition() {
           </View>
 
           <View ref={descriptionSectionRef} style={styles.section} collapsable={false}>
-            <Text style={styles.label}>Description *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Description *</Text>
             <TextInput
-              style={styles.textArea}
+              style={[styles.textArea, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
               value={description}
               onChangeText={setDescription}
               placeholder="Provide details about the change in your condition or treatment..."
+              placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={6}
               textAlignVertical="top"
               onFocus={() => { descriptionFocusedRef.current = true; }}
               onBlur={() => { descriptionFocusedRef.current = false; }}
             />
-            <Text style={styles.helperText}>
+            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
               Include medication names, dosages, diagnoses, or other relevant details
             </Text>
           </View>
@@ -317,6 +322,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
   },
   infoText: {
     fontSize: 14,

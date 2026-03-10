@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { HelpCircle, ChevronDown, ChevronUp, ArrowLeft, MessageCircle } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface FAQ {
   id: string;
@@ -42,12 +43,12 @@ const FAQS: FAQ[] = [
   {
     id: '5',
     question: 'How do I update my medical conditions?',
-    answer: 'Go to the Add tab and select "Medical Change" to report any changes in your diagnosed conditions, new diagnoses, or updates to existing conditions.',
+    answer: 'From the Home screen, tap "Medical Change" to report any changes in your diagnosed conditions, new diagnoses, or updates to existing conditions.',
   },
   {
     id: '6',
     question: 'Can I edit or delete entries?',
-    answer: 'Currently, entries cannot be edited or deleted to maintain data integrity for research purposes. If you made a mistake, please contact your healthcare provider or the research team.',
+    answer: 'Yes, you can edit entries. Go to the History tab, tap on any entry, then tap the pencil icon to make changes. Entries cannot be deleted to maintain data integrity for research purposes.',
   },
   {
     id: '7',
@@ -63,6 +64,7 @@ const FAQS: FAQ[] = [
 
 export default function HelpScreen() {
   const router = useRouter();
+  const { colors, fs } = useTheme();
   const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
 
   const toggleFAQ = (id: string) => {
@@ -70,49 +72,49 @@ export default function HelpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft color={theme.primary} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help & Support</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontSize: fs(18) }]}>Help & Support</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(20) }]}>Frequently Asked Questions</Text>
 
           {FAQS.map((faq) => (
-            <View key={faq.id} style={styles.faqItem}>
+            <View key={faq.id} style={[styles.faqItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <TouchableOpacity
                 style={styles.faqQuestion}
                 onPress={() => toggleFAQ(faq.id)}
               >
                 <View style={styles.faqQuestionContent}>
                   <HelpCircle color={theme.primary} size={20} />
-                  <Text style={styles.faqQuestionText}>{faq.question}</Text>
+                  <Text style={[styles.faqQuestionText, { color: colors.text, fontSize: fs(16) }]}>{faq.question}</Text>
                 </View>
                 {expandedFAQ === faq.id ? (
-                  <ChevronUp color="#666" size={20} />
+                  <ChevronUp color={colors.textSecondary} size={20} />
                 ) : (
-                  <ChevronDown color="#666" size={20} />
+                  <ChevronDown color={colors.textSecondary} size={20} />
                 )}
               </TouchableOpacity>
               {expandedFAQ === faq.id && (
                 <View style={styles.faqAnswer}>
-                  <Text style={styles.faqAnswerText}>{faq.answer}</Text>
+                  <Text style={[styles.faqAnswerText, { color: colors.textSecondary, fontSize: fs(15) }]}>{faq.answer}</Text>
                 </View>
               )}
             </View>
           ))}
         </View>
 
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Need More Help?</Text>
-          <Text style={styles.contactText}>
+        <View style={[styles.contactSection, { backgroundColor: colors.cardBg }]}>
+          <Text style={[styles.contactTitle, { color: colors.text, fontSize: fs(18) }]}>Need More Help?</Text>
+          <Text style={[styles.contactText, { color: colors.textSecondary, fontSize: fs(15) }]}>
             If you have questions that aren't answered here, please contact your healthcare
-            provider or the research team through the MyHealth portal.
+            provider or the research team.
           </Text>
         </View>
       </ScrollView>

@@ -36,9 +36,9 @@ import {
   Watch,
 } from 'lucide-react-native';
 import { theme } from '@/theme/colors';
+import { useTheme } from '@/contexts/ThemeContext';
 import AppLogo from '@/components/AppLogo';
 import { useHealthKit } from '@/hooks/useHealthKit';
-import { checkAndNotifyIfElevated } from '@/lib/elevatedHeartRateNotification';
 
 interface QuickStats {
   todayEntries: number;
@@ -74,6 +74,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { vitals, isAvailable: hkAvailable } = useHealthKit();
+  const { isDark, colors, fs } = useTheme();
   const [stats, setStats] = useState<QuickStats>({
     todayEntries: 0,
     weeklyEntries: 0,
@@ -88,12 +89,6 @@ export default function HomeScreen() {
       loadStats();
     }, [user])
   );
-
-  // When vitals load (e.g. from HealthKit), check for elevated heart rate and notify if enabled
-  useEffect(() => {
-    if (!user || !vitals) return;
-    checkAndNotifyIfElevated(user.uid, vitals);
-  }, [user?.uid, vitals]);
 
   const loadStats = async () => {
     if (!user) {
@@ -206,133 +201,229 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: isDark ? colors.surface : theme.primary }]}>
+          <View style={styles.headerRight}>
+            {hkAvailable && (
+              <View style={styles.syncBadge}>
+                <Watch color="#fff" size={20} />
+                <Text style={[styles.syncText, { fontSize: fs(14) }]}>
+                  {timeAgo(vitals?.lastUpdated ?? null)}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
+              <HelpCircle color="#fff" size={28} />
+            </TouchableOpacity>
+          </View>
           <AppLogo size="small" showTitle={true} variant="light" />
           <View style={styles.headerContent}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
-              <Text style={styles.subtitle}>How are you feeling today?</Text>
-            </View>
-            <View style={styles.headerRight}>
-              {hkAvailable && (
-                <View style={styles.syncBadge}>
-                  <Watch color="#fff" size={16} />
-                  <Text style={styles.syncText}>{timeAgo(vitals?.lastUpdated ?? null)}</Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.helpButton} onPress={() => router.push('/screens/help')}>
-                <HelpCircle color="#fff" size={28} />
-              </TouchableOpacity>
+              <Text style={[styles.greeting, { fontSize: fs(24) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{getGreeting()}{firstName ? `, ${firstName}` : ''}!</Text>
+              <Text style={[styles.subtitle, { fontSize: fs(15) }]}>How are you feeling today?</Text>
             </View>
           </View>
         </View>
 
         {daysSinceLastEntry !== null && daysSinceLastEntry >= 2 && (
-          <View style={styles.alertBanner}>
+          <View style={[styles.alertBanner, isDark && { backgroundColor: '#3b1a00', borderColor: '#7c3a00' }]}>
             <View style={styles.alertIconContainer}>
               <AlertCircle color="#ea580c" size={24} />
             </View>
             <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>Haven't logged in {daysSinceLastEntry} days</Text>
-              <Text style={styles.alertText}>
+              <Text
+                style={[
+                  styles.alertTitle,
+                  { fontSize: fs(16) },
+                  isDark && { color: '#fbbf24' },
+                ]}
+              >
+                Haven't logged in {daysSinceLastEntry} days
+              </Text>
+              <Text
+                style={[
+                  styles.alertText,
+                  { fontSize: fs(14) },
+                  isDark && { color: '#fbbf24' },
+                ]}
+              >
                 Regular tracking helps us better understand your health patterns. Please log your symptoms and well-being today.
               </Text>
             </View>
           </View>
         )}
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCardSmall}>
-            <Text style={styles.statLabel}>Today's{'\n'}Entries</Text>
-            <Text style={styles.statValue}>{stats.todayEntries}</Text>
-          </View>
-
-          <View style={styles.wellbeingBlock}>
-            <Text style={styles.wellbeingBlockTitle}>Well-being</Text>
+        <View style={styles.statsContainer}>
+          <View style={[styles.wellbeingBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text
+              style={[
+                styles.wellbeingBlockTitle,
+                { color: colors.textSecondary, fontSize: fs(14) },
+              ]}
+            >
+              Well-Being
+            </Text>
             {latestWellbeing ? (
               <View style={styles.wellbeingRow}>
                 <View style={styles.wellbeingPill}>
-                  <Zap color={theme.primary} size={16} />
-                  <Text style={styles.wellbeingPillLabel}>Energy</Text>
-                  <Text style={styles.wellbeingPillValue}>{latestWellbeing.energyLevel.toFixed(1)}</Text>
+                  <Zap color={theme.primary} size={20} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Energy
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.energyLevel.toFixed(1)}
+                  </Text>
                 </View>
                 <View style={styles.wellbeingPill}>
-                  <PersonStanding color={theme.primary} size={16} />
-                  <Text style={styles.wellbeingPillLabel}>Mood</Text>
-                  <Text style={styles.wellbeingPillValue}>{latestWellbeing.moodRating.toFixed(1)}</Text>
+                  <PersonStanding color={theme.primary} size={22} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Mood
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.moodRating.toFixed(1)}
+                  </Text>
                 </View>
                 <View style={styles.wellbeingPill}>
-                  <Wind color={theme.primary} size={16} />
-                  <Text style={styles.wellbeingPillLabel}>Stress</Text>
-                  <Text style={styles.wellbeingPillValue}>{latestWellbeing.stressLevel.toFixed(1)}</Text>
+                  <Wind color={theme.primary} size={22} />
+                  <Text
+                    style={[
+                      styles.wellbeingPillLabel,
+                      { color: colors.textSecondary, fontSize: fs(14) },
+                    ]}
+                  >
+                    Stress
+                  </Text>
+                  <Text
+                    style={[
+                      styles.wellbeingPillValue,
+                      { color: colors.text, fontSize: fs(18) },
+                    ]}
+                  >
+                    {latestWellbeing.stressLevel.toFixed(1)}
+                  </Text>
                 </View>
               </View>
             ) : (
-              <Text style={styles.wellbeingEmpty}>—</Text>
+              <Text
+                style={[
+                  styles.wellbeingEmpty,
+                  { color: colors.textTertiary, fontSize: fs(13) },
+                ]}
+              >
+                —
+              </Text>
             )}
           </View>
-
-          <View style={styles.statCardSmall}>
-            <Text style={styles.statLabel}>This{'\n'}Week</Text>
-            <Text style={styles.statValue}>{stats.weeklyEntries}</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statCardSmall}>
+              <Text style={[styles.statLabel, { fontSize: fs(14) }]}>
+                Today's Entries
+              </Text>
+              <Text style={[styles.statValue, { fontSize: fs(24) }]}>
+                {stats.todayEntries}
+              </Text>
+            </View>
+            <View style={styles.statCardSmall}>
+              <Text style={[styles.statLabel, { fontSize: fs(14) }]}>
+                This Week
+              </Text>
+              <Text style={[styles.statValue, { fontSize: fs(24) }]}>
+                {stats.weeklyEntries}
+              </Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontSize: fs(20) }]}>Quick Actions</Text>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.symptom.bg, borderColor: theme.symptom.border }]}
+            style={[styles.actionCard, { backgroundColor: isDark ? '#3a1a1a' : '#fee', borderColor: colors.border }]}
             onPress={() => router.push('/screens/symptom-entry')}
           >
-            <View style={[styles.actionIcon, { backgroundColor: theme.symptom.icon }]}>
-              <Heart color="#fff" size={26} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Heart color="#dc2626" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Log Symptom
+              </Text>
             </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Log Symptom</Text>
-              <Text style={styles.actionDescription}>Record any symptoms you're experiencing</Text>
-            </View>
+            <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
+              Record any symptoms you're experiencing right now
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.wellbeing.bg, borderColor: theme.wellbeing.border }]}
+            style={[styles.actionCard, { backgroundColor: isDark ? '#1a2a3a' : '#e6f2ff', borderColor: colors.border }]}
             onPress={() => router.push('/screens/wellbeing-rating')}
           >
-            <View style={[styles.actionIcon, { backgroundColor: theme.wellbeing.icon }]}>
-              <TrendingUp color="#fff" size={26} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <TrendingUp color="#0066cc" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Rate Well-Being
+              </Text>
             </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Rate Well-being</Text>
-              <Text style={styles.actionDescription}>How do you feel overall today?</Text>
-            </View>
+            <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
+              Share how you're feeling overall today
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.activity.bg, borderColor: theme.activity.border }]}
+            style={[styles.actionCard, { backgroundColor: isDark ? '#1a2e1a' : '#f0fdf4', borderColor: colors.border }]}
             onPress={() => router.push('/screens/activity-entry')}
           >
-            <View style={[styles.actionIcon, { backgroundColor: theme.activity.icon }]}>
-              <Activity color="#fff" size={26} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Activity color="#16a34a" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Log Activity
+              </Text>
             </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Log Activity</Text>
-              <Text style={styles.actionDescription}>Track your daily activities</Text>
-            </View>
+            <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
+              Track activities and exercises you've done
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.medical.bg, borderColor: theme.medical.border }]}
+            style={[styles.actionCard, { backgroundColor: isDark ? '#3a2a1a' : '#fef3e7', borderColor: colors.border }]}
             onPress={() => router.push('/screens/medical-condition')}
           >
-            <View style={[styles.actionIcon, { backgroundColor: theme.medical.icon }]}>
-              <Stethoscope color="#fff" size={26} />
+            <View style={styles.actionCardHeader}>
+              <View style={styles.actionCardIcon}>
+                <Stethoscope color="#ea580c" size={32} />
+              </View>
+              <Text style={[styles.actionCardTitle, { color: colors.text, fontSize: fs(24) }]}>
+                Medical Change
+              </Text>
             </View>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Medical Change</Text>
-              <Text style={styles.actionDescription}>Report changes in your condition</Text>
-            </View>
+            <Text style={[styles.actionCardDescription, { color: colors.textSecondary, fontSize: fs(17) }]}>
+              Report changes in medications or condition
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -355,7 +446,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.primary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    gap: 14,
   },
   headerContent: {
     flexDirection: 'row',
@@ -365,6 +455,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
   },
   syncBadge: {
@@ -393,10 +484,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.8)',
   },
-  statsRow: {
-    flexDirection: 'row',
+  statsContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    gap: 10,
+    alignItems: 'stretch',
+  },
+  statsRow: {
+    flexDirection: 'row',
     gap: 10,
     alignItems: 'stretch',
   },
@@ -407,6 +502,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 64,
+    flex: 1,
   },
   wellbeingBlock: {
     flex: 1,
@@ -421,6 +517,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
     textAlign: 'center',
+    fontWeight: '700',
   },
   wellbeingRow: {
     flexDirection: 'row',
@@ -452,6 +549,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     marginBottom: 4,
     textAlign: 'center',
+    fontWeight: '700',
   },
   statValue: {
     fontSize: 24,
@@ -468,35 +566,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: 24,
+    borderRadius: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e5e5e5',
   },
-  actionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    justifyContent: 'center',
+  actionCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 14,
+    marginBottom: 12,
   },
-  actionContent: {
-    flex: 1,
-    justifyContent: 'center',
+  actionCardIcon: {
+    marginRight: 12,
   },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  actionCardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  actionDescription: {
-    fontSize: 14,
+  actionCardDescription: {
+    fontSize: 17,
     color: '#666',
+    lineHeight: 24,
   },
   alertBanner: {
     flexDirection: 'row',
