@@ -115,6 +115,123 @@ npm install
 npx firebase deploy --only functions
 ```
 
+## Data Export — Firebase to BigQuery
+
+The script `firebase_to_bigquery_export.py` exports all 11 Firestore collections to BigQuery (`heartsense-488403` / dataset `heartsense_data`) for SQL-based research and ML analysis.
+
+### Setup
+
+```bash
+pip install firebase-admin google-cloud-bigquery
+```
+
+Two service account keys are required — one for Firestore, one for BigQuery:
+
+```bash
+export FIREBASE_CREDENTIALS="/path/to/firebase-adminsdk-key.json"
+export BIGQUERY_CREDENTIALS="/path/to/heartsense-bigquery-key.json"
+```
+
+### Running the export
+
+```bash
+# Full export — replaces all tables (safe to re-run)
+python firebase_to_bigquery_export.py
+
+# Incremental — only records since a given date (appends)
+python firebase_to_bigquery_export.py --since 2026-01-01
+
+# Single collection
+python firebase_to_bigquery_export.py --collection symptoms
+```
+
+### BigQuery Tables
+
+| Table | Description |
+|---|---|
+| `activities` | Apple Watch / HealthKit synced activities |
+| `daily_engagement_logs` | Per-day entry and notification counts per user |
+| `engagement_alerts` | Inactivity and reminder notifications sent |
+| `engagement_stats` | Aggregate engagement stats per user |
+| `health_data` | Raw HealthKit data points (HR, steps, SpO2, etc.) |
+| `medical_conditions` | Patient-logged medication and condition changes |
+| `profiles` | User profiles and onboarding status |
+| `symptoms` | Symptom logs with type, severity, and timestamp |
+| `user_milestones` | First entry, streaks, and other milestone events |
+| `user_preferences` | Notification settings and HR alert thresholds |
+| `well_being_ratings` | Daily mood, energy, and stress self-assessments |
+
+### Example SQL Queries
+
+**View all symptom logs with patient names**
+```sql
+SELECT
+  p.full_name,
+  s.symptomType,
+  s.severity,
+  s.description,
+  s.occurredAt
+FROM `heartsense-488403.heartsense_data.symptoms` s
+JOIN `heartsense-488403.heartsense_data.profiles` p
+  ON s.userId = p.doc_id
+ORDER BY s.occurredAt DESC;
+```
+
+**Daily well-being trends per user**
+```sql
+SELECT
+  p.full_name,
+  DATE(w.recorded_at) AS date,
+  ROUND(AVG(w.mood_rating), 2)   AS avg_mood,
+  ROUND(AVG(w.energy_level), 2)  AS avg_energy,
+  ROUND(AVG(w.stress_level), 2)  AS avg_stress
+FROM `heartsense-488403.heartsense_data.well_being_ratings` w
+JOIN `heartsense-488403.heartsense_data.profiles` p
+  ON w.user_id = p.doc_id
+GROUP BY p.full_name, date
+ORDER BY p.full_name, date DESC;
+```
+
+**Heart rate readings over time per user**
+```sql
+SELECT
+  p.full_name,
+  h.recorded_at,
+  h.value AS heart_rate_bpm
+FROM `heartsense-488403.heartsense_data.health_data` h
+JOIN `heartsense-488403.heartsense_data.profiles` p
+  ON h.user_id = p.doc_id
+WHERE h.data_type = 'heartRate'
+ORDER BY p.full_name, h.recorded_at DESC;
+```
+
+**Most common symptoms across all users**
+```sql
+SELECT
+  symptomType,
+  COUNT(*)            AS total_logs,
+  ROUND(AVG(severity), 2) AS avg_severity
+FROM `heartsense-488403.heartsense_data.symptoms`
+WHERE symptomType IS NOT NULL
+GROUP BY symptomType
+ORDER BY total_logs DESC;
+```
+
+**User engagement summary**
+```sql
+SELECT
+  p.full_name,
+  e.totalEntriesLogged,
+  e.totalDaysActive,
+  e.weeklyEntryCount,
+  e.monthlyEntryCount,
+  e.lastActivityDate
+FROM `heartsense-488403.heartsense_data.engagement_stats` e
+JOIN `heartsense-488403.heartsense_data.profiles` p
+  ON e.userId = p.doc_id
+ORDER BY e.totalEntriesLogged DESC;
+```
+
 ## Team
 
 Stanford CS342 — 2026 HeartSense Team
