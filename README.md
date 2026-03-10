@@ -108,7 +108,11 @@ cd ../..
 
 ## Backend Configuration (Firebase)
 
-The app connects to a shared Firebase project. The Firebase configuration is already included in the codebase. If you need to set up your own Firebase instance:
+The app connects to a shared Firebase project. Access the Firebase console here:
+
+**Firebase Console:** [cs342-2026-wong](https://console.firebase.google.com/u/1/project/cs342-2026-wong-3qriyd12e/overview)
+
+The Firebase configuration is already included in the codebase. If you need to set up your own Firebase instance:
 
 1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
 2. Enable **Authentication** (Email/Password provider)
