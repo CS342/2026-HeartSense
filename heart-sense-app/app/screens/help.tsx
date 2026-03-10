@@ -114,7 +114,7 @@ export default function HelpScreen() {
           <Text style={[styles.contactTitle, { color: colors.text, fontSize: fs(18) }]}>Need More Help?</Text>
           <Text style={[styles.contactText, { color: colors.textSecondary, fontSize: fs(15) }]}>
             If you have questions that aren't answered here, please contact your healthcare
-            provider or the research team through the MyHealth portal.
+            provider or the research team.
           </Text>
         </View>
       </ScrollView>

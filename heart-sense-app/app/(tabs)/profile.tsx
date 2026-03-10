@@ -677,8 +677,8 @@ export default function ProfileScreen() {
                     <Text
                       style={
                         profile.date_of_birth
-                          ? styles.fieldValue
-                          : styles.inputPlaceholder
+                          ? [styles.fieldValue, { color: colors.text, fontSize: fs(16) }]
+                          : [styles.inputPlaceholder, { color: colors.textTertiary, fontSize: fs(16) }]
                       }
                     >
                       {profile.date_of_birth
@@ -701,8 +701,8 @@ export default function ProfileScreen() {
                         minimumDate={
                           new Date(new Date().setFullYear(new Date().getFullYear() - 120))
                         }
-                        textColor="black"
-                        accentColor="black"
+                        textColor={isDark ? "#ffffff" : "#000000"}
+                        accentColor={isDark ? theme.primaryLight : "#000000"}
                         style={styles.dateTimePicker}
                       />
                     </View>
@@ -717,7 +717,7 @@ export default function ProfileScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.fieldValue}>
+                <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>
                   {profile.date_of_birth
                     ? (parseLocalDate(profile.date_of_birth) ?? new Date()).toLocaleDateString(
                       "en-US",
@@ -754,6 +754,7 @@ export default function ProfileScreen() {
                         style={[
                           styles.genderOptionText,
                           profile.gender === opt && styles.genderOptionTextSelected,
+                          { color: profile.gender === opt ? theme.primary : colors.text },
                         ]}
                       >
                         {opt}
@@ -762,7 +763,7 @@ export default function ProfileScreen() {
                   ))}
                 </View>
               ) : (
-                <Text style={styles.fieldValue}>
+                <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>
                   {profile.gender || "Not set"}
                 </Text>
               )}
@@ -777,17 +778,17 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Height (cm)</Text>
               {editing ? (
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBg }]}
                   value={profile.height_cm}
                   onChangeText={(text) =>
                     setProfile((p) => ({ ...p, height_cm: text }))
                   }
                   placeholder="e.g. 170"
                   keyboardType="numeric"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textTertiary}
                 />
               ) : (
-                <Text style={styles.fieldValue}>
+                <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>
                   {profile.height_cm ? `${profile.height_cm} cm` : "Not set"}
                 </Text>
               )}
@@ -802,17 +803,17 @@ export default function ProfileScreen() {
               <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontSize: fs(12) }]}>Weight (kg)</Text>
               {editing ? (
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBg }]}
                   value={profile.weight_kg}
                   onChangeText={(text) =>
                     setProfile((p) => ({ ...p, weight_kg: text }))
                   }
                   placeholder="e.g. 70"
                   keyboardType="numeric"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textTertiary}
                 />
               ) : (
-                <Text style={styles.fieldValue}>
+                <Text style={[styles.fieldValue, { color: colors.text, fontSize: fs(16) }]}>
                   {profile.weight_kg ? `${profile.weight_kg} kg` : "Not set"}
                 </Text>
               )}
