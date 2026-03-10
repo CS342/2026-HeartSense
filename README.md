@@ -27,7 +27,6 @@ Scan the QR code above with the **Expo Go** app ([iOS](https://apps.apple.com/ap
 - **Activity Entry** — Log physical activity and exercise
 - **Medical Conditions** — Track and manage existing medical conditions
 - **Health History** — View historical symptom, wellbeing, and activity data
-- **Messaging** — In-app messaging interface for patient–care team communication
 - **Profile Management** — View and edit user profile and preferences
 - **HealthKit Integration (native build only)** — Automatic syncing of heart rate, step count, and other Apple Watch / Health data to Firebase
 - **Help Screen** — In-app help and support resources
@@ -157,13 +156,6 @@ In Xcode:
 3. The HealthKit permission prompt will appear on first launch — grant access to enable health data syncing
 
 > **Why Xcode?** HealthKit is a native Apple framework that requires iOS entitlements and native module linking. The Expo Go runtime cannot load these native modules, so a full native build via Xcode is required for HealthKit functionality.
-
----
-
-## Download the App
-
-<!-- TODO: Add link to built .ipa / TestFlight when available -->
-A downloadable build will be made available here. In the meantime, use one of the two methods above to run the app.
 
 ---
 
