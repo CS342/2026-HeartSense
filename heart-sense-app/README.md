@@ -1,10 +1,18 @@
-# Medical Symptom Tracking App
+6# Medical Symptom Tracking App
 
 A comprehensive mobile health tracking application designed for clinical research, specifically for sudden cardiac arrest and atrial fibrillation studies at Stanford.
 
 ## Overview
 
 This app enables patients to easily record symptoms, activities, well-being ratings, and medical condition changes in real-time. The data collected supports clinical research and improves patient care pathways.
+
+## Expo Preview
+
+Scan the QR code below with your device camera (iOS) or the Expo Go app to preview the latest build:
+
+[![Expo QR Code](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fexpo.dev%2Fpreview%2Fupdate%3Fmessage%3DAdd%2BFirebase%2Bconsole%2Blink%2Bto%2BREADME%2Bfor%2Bteaching%2Bteam%2Baccess%250A%250ACo-Authored-By%253A%2BClaude%2BOpus%2B4.6%2B%253Cnoreply%2540anthropic.com%253E%26updateRuntimeVersion%3D1.0.0%26createdAt%3D2026-03-11T06%253A05%253A48.077Z%26slug%3Dexp%26projectId%3D4171cdf0-600d-4f1f-8fbd-209ec90d4982%26group%3D763655ff-10c8-466a-b4d4-091c90039ece)](https://expo.dev/preview/update?message=Add+Firebase+console+link+to+README+for+teaching+team+access%0A%0ACo-Authored-By%3A+Claude+Opus+4.6+%3Cnoreply%40anthropic.com%3E&updateRuntimeVersion=1.0.0&createdAt=2026-03-11T06%3A05%3A48.077Z&slug=exp&projectId=4171cdf0-600d-4f1f-8fbd-209ec90d4982&group=763655ff-10c8-466a-b4d4-091c90039ece)
+
+[Open in Expo](https://expo.dev/preview/update?message=Add+Firebase+console+link+to+README+for+teaching+team+access%0A%0ACo-Authored-By%3A+Claude+Opus+4.6+%3Cnoreply%40anthropic.com%3E&updateRuntimeVersion=1.0.0&createdAt=2026-03-11T06%3A05%3A48.077Z&slug=exp&projectId=4171cdf0-600d-4f1f-8fbd-209ec90d4982&group=763655ff-10c8-466a-b4d4-091c90039ece)
 
 ## Features
 
@@ -192,3 +200,58 @@ The app is ready to use. Users can:
 4. View their history and track patterns over time
 
 All data is immediately available for clinical research analysis through the Supabase dashboard.
+
+## Apple Health / HealthKit Integration (Apple Watch sync)
+
+This project can integrate with Apple HealthKit (Apple Watch) using the `react-native-healthkit` native module. Because this is a native iOS capability, the app must be built with the iOS native project present (Expo prebuild or a bare React Native project). Below are the steps and notes to enable HealthKit support.
+
+1) Install the dependency
+
+```bash
+cd heart-sense-app
+yarn add react-native-healthkit
+# or npm install react-native-healthkit --save
+```
+
+2) For Expo managed apps: create the native projects via prebuild, or use EAS Build with a custom dev client.
+
+```bash
+# generate native iOS/android projects
+npx expo prebuild --platform ios
+
+# then install CocoaPods
+cd ios && pod install
+```
+
+3) Open the generated Xcode workspace (`ios/YourApp.xcworkspace`) and enable the HealthKit capability for your app target (Signing & Capabilities -> + Capability -> HealthKit). This will add the required entitlements.
+
+4) Make sure `NSHealthShareUsageDescription` and `NSHealthUpdateUsageDescription` are present (already added to `app.json` for Expo builds). If using a bare project, add these keys to `ios/<AppName>/Info.plist` with user-facing strings.
+
+5) Entitlements: ensure the `healthkit` entitlement is set in the app's entitlements file (Xcode handles this when you enable the capability). If building with EAS, configure the entitlement in your provisioning profile and ensure EAS builds use a profile that includes HealthKit.
+
+6) Run the app on an iOS device or simulator (simulator supports HealthKit for simple testing with synthetic data). If using the simulator, ensure you are running the latest iOS simulator via Xcode and add sample Health data via the simulator's Debug -> Health Data menu.
+
+7) Usage in code
+
+Import the lightweight wrapper at `lib/healthkit.ts` and request permissions before reading/writing:
+
+```ts
+import HealthKit from '../lib/healthkit'
+
+await HealthKit.requestAuthorization({
+   read: ['step_count', 'heart_rate'],
+   write: ['step_count']
+})
+
+const steps = await HealthKit.getStepCount(new Date(Date.now()-86400000), new Date())
+```
+
+Notes and caveats:
+- You must rebuild the native iOS app after installing the library (`expo prebuild` + `pod install` or a fresh Xcode build).
+- Locally you will need Xcode and CocoaPods installed to run on the iOS simulator or device.
+- For App Store distribution, ensure your Apple Developer provisioning profile and entitlements include HealthKit.
+- For EAS builds, configure `eas.json` to use a credentials profile with HealthKit enabled.
+
+If you'd like, I can:
+- Run the dependency install and `expo prebuild` here (requires network and local toolchain) or
+- Prepare an EAS build profile and entitlements changes for automated building.
