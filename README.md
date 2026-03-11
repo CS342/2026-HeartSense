@@ -10,10 +10,9 @@ HeartSense is a mobile health application designed for patients with cardiovascu
 
 > **Note:** The Expo Go version does **not** include HealthKit integration, as HealthKit requires native iOS capabilities that are unavailable in the Expo Go runtime. To experience the full app with HealthKit/Apple Watch data syncing, you must build and run the app from source in Xcode (see [Running with HealthKit](#running-with-healthkit-xcode--ios-simulator) below).
 
-<!-- TODO: Replace placeholder with actual QR code image -->
-![Expo Go QR Code](https://via.placeholder.com/250x250?text=QR+Code+Coming+Soon)
+[![Expo Go QR Code](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fexpo.dev%2Fpreview%2Fupdate%3Fmessage%3DAdd%2BFirebase%2Bconsole%2Blink%2Bto%2BREADME%2Bfor%2Bteaching%2Bteam%2Baccess%250A%250ACo-Authored-By%253A%2BClaude%2BOpus%2B4.6%2B%253Cnoreply%2540anthropic.com%253E%26updateRuntimeVersion%3D1.0.0%26createdAt%3D2026-03-11T06%253A05%253A48.077Z%26slug%3Dexp%26projectId%3D4171cdf0-600d-4f1f-8fbd-209ec90d4982%26group%3D763655ff-10c8-466a-b4d4-091c90039ece)](https://expo.dev/preview/update?message=Add+Firebase+console+link+to+README+for+teaching+team+access%0A%0ACo-Authored-By%3A+Claude+Opus+4.6+%3Cnoreply%40anthropic.com%3E&updateRuntimeVersion=1.0.0&createdAt=2026-03-11T06%3A05%3A48.077Z&slug=exp&projectId=4171cdf0-600d-4f1f-8fbd-209ec90d4982&group=763655ff-10c8-466a-b4d4-091c90039ece)
 
-Scan the QR code above with the **Expo Go** app ([iOS](https://apps.apple.com/app/expo-go/id982107779)) to open HeartSense on your device.
+Scan the QR code above with the **Expo Go** app ([iOS](https://apps.apple.com/app/expo-go/id982107779)) to open HeartSense on your device, or [open directly in Expo](https://expo.dev/preview/update?message=Add+Firebase+console+link+to+README+for+teaching+team+access%0A%0ACo-Authored-By%3A+Claude+Opus+4.6+%3Cnoreply%40anthropic.com%3E&updateRuntimeVersion=1.0.0&createdAt=2026-03-11T06%3A05%3A48.077Z&slug=exp&projectId=4171cdf0-600d-4f1f-8fbd-209ec90d4982&group=763655ff-10c8-466a-b4d4-091c90039ece).
 
 ---
 
